@@ -1,65 +1,577 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { transform, type TransformError } from "@json-transformer/core";
+import { inferFields } from "@json-transformer/core";
+import {
+  Check,
+  CircleHelp,
+  Copy,
+  FileJson2,
+  LayoutTemplate,
+} from "lucide-react";
+import { useDebounce } from "@/lib/use-debounce";
+import { dslToRows, newRow, rowsToDsl, type BuilderRow } from "@/lib/builder";
+import { extractPaths, itemFieldsFor } from "@/lib/json-paths";
+import { TransformBuilder } from "@/components/transform-builder";
+import { FieldTree, type FieldMapping } from "@/components/field-tree";
+import { HelpDialog, type HelpExample } from "@/components/help-dialog";
+import { TemplateGallery } from "@/components/template-gallery";
+import type { Template } from "@/lib/templates";
+import {
+  trackJsonPasted,
+  trackOutputCopied,
+  trackTemplateLoaded,
+  trackTransformCompleted,
+  trackTransformWarning,
+} from "@/lib/analytics";
+
+const SAMPLE_INPUT = JSON.stringify(
+  {
+    user: {
+      first: "John",
+      last: "Doe",
+      age: 25,
+      contact: { email: "john@example.com" },
+    },
+    users: [
+      { name: "Ada", email: "ada@example.com", active: true },
+      { name: "Linus", email: "linus@example.com", active: false },
+    ],
+    items: [
+      { name: "Keyboard", price: 49 },
+      { name: "Mouse", price: 25 },
+    ],
+  },
+  null,
+  2,
+);
+
+const SAMPLE_DSL = JSON.stringify(
+  {
+    fullName: "$user.first + ' ' + $user.last",
+    isAdult: "$user.age > 18",
+    email: "user.contact.email",
+    firstItem: "items[0].name",
+    emails: "users[].email",
+    source: "api",
+  },
+  null,
+  2,
+);
+
+type PanelError = { title: string; detail: string } | null;
+type EditorMode = "builder" | "dsl";
 
 export default function Home() {
+  const [inputText, setInputText] = useState(SAMPLE_INPUT);
+  const [dslText, setDslText] = useState(SAMPLE_DSL);
+  const [copied, setCopied] = useState(false);
+  const [editorMode, setEditorMode] = useState<EditorMode>("builder");
+  const [builderRows, setBuilderRows] = useState<BuilderRow[]>(
+    () => dslToRows(SAMPLE_DSL) ?? [],
+  );
+  const [builderNotice, setBuilderNotice] = useState<string | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+
+  const debouncedInput = useDebounce(inputText, 200);
+  const debouncedDsl = useDebounce(dslText, 200);
+  const transformFingerprintRef = useRef<string | null>(null);
+
+  const parsedInputForHints = useMemo(() => {
+    try {
+      return JSON.parse(debouncedInput) as unknown;
+    } catch {
+      return undefined;
+    }
+  }, [debouncedInput]);
+
+  const pathSuggestions = useMemo(
+    () => extractPaths(parsedInputForHints),
+    [parsedInputForHints],
+  );
+
+  const fieldTree = useMemo(
+    () => inferFields(parsedInputForHints),
+    [parsedInputForHints],
+  );
+
+  function handleRowsChange(rows: BuilderRow[]) {
+    setBuilderRows(rows);
+    setDslText(JSON.stringify(rowsToDsl(rows), null, 2));
+  }
+
+  function switchMode(mode: EditorMode) {
+    if (mode === editorMode) return;
+    if (mode === "builder") {
+      const rows = dslToRows(dslText);
+      if (rows === null) {
+        setBuilderNotice(
+          "This transform uses features the builder doesn't support yet (nested objects or invalid JSON). Keep editing it as DSL.",
+        );
+        return;
+      }
+      setBuilderRows(rows);
+    }
+    setBuilderNotice(null);
+    setEditorMode(mode);
+  }
+
+  function loadDslSample() {
+    setDslText(SAMPLE_DSL);
+    setBuilderRows(dslToRows(SAMPLE_DSL) ?? []);
+    setBuilderNotice(null);
+  }
+
+  function handleMapField(mapping: FieldMapping) {
+    let rows = builderRows;
+
+    // Coming from the DSL tab, sync rows first (bail if unrepresentable).
+    if (editorMode === "dsl") {
+      const imported = dslToRows(dslText);
+      if (imported === null) {
+        setBuilderNotice(
+          "Can't add fields visually while the DSL uses unsupported shapes. Edit it in the DSL tab.",
+        );
+        return;
+      }
+      rows = imported;
+    }
+
+    const usedKeys = new Set(rows.map((r) => r.outputKey));
+    let key = mapping.outputKey;
+    for (let i = 2; usedKeys.has(key); i++) key = `${mapping.outputKey}${i}`;
+
+    handleRowsChange([
+      ...rows,
+      newRow({
+        outputKey: key,
+        operation: mapping.operation,
+        source: mapping.source,
+        select: mapping.select ?? "",
+      }),
+    ]);
+    setBuilderNotice(null);
+    setEditorMode("builder");
+  }
+
+  function tryExample(example: HelpExample) {
+    const inputJson = JSON.stringify(example.input, null, 2);
+    const dslJson = JSON.stringify(example.dsl, null, 2);
+    setInputText(inputJson);
+    setDslText(dslJson);
+    setBuilderRows(dslToRows(dslJson) ?? []);
+    setBuilderNotice(null);
+    setHelpOpen(false);
+  }
+
+  function useTemplate(template: Template) {
+    const inputJson = JSON.stringify(template.input, null, 2);
+    const dslJson = JSON.stringify(template.dsl, null, 2);
+    setInputText(inputJson);
+    setDslText(dslJson);
+    // Templates are guaranteed builder-compatible (see templates.test.ts).
+    setBuilderRows(dslToRows(dslJson) ?? []);
+    setBuilderNotice(null);
+    setEditorMode("builder");
+    setTemplatesOpen(false);
+    trackTemplateLoaded({
+      template_id: template.id,
+      template_name: template.name,
+      template_category: template.category,
+      editor_mode: "builder",
+    });
+  }
+
+  function handleInputPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const pasted = e.clipboardData.getData("text");
+    let inputValid = false;
+    try {
+      JSON.parse(pasted);
+      inputValid = true;
+    } catch {
+      // invalid JSON paste — still tracked
+    }
+    trackJsonPasted({
+      paste_length: pasted.length,
+      input_valid: inputValid,
+      editor_mode: editorMode,
+    });
+  }
+
+  const result = useMemo(() => {
+    let parsedInput: unknown;
+    let inputError: PanelError = null;
+    let dslError: PanelError = null;
+    let output: string | null = null;
+    let warnings: TransformError[] = [];
+
+    if (debouncedInput.trim() === "") {
+      inputError = {
+        title: "No input",
+        detail: "Paste some JSON to get started.",
+      };
+    } else {
+      try {
+        parsedInput = JSON.parse(debouncedInput);
+      } catch (err) {
+        inputError = {
+          title: "Invalid JSON input",
+          detail: err instanceof Error ? err.message : "Could not parse JSON.",
+        };
+      }
+    }
+
+    let parsedDsl: unknown;
+    if (debouncedDsl.trim() === "") {
+      dslError = {
+        title: "No transform",
+        detail: "Write a DSL object to transform the input.",
+      };
+    } else {
+      try {
+        parsedDsl = JSON.parse(debouncedDsl);
+      } catch (err) {
+        dslError = {
+          title: "Invalid DSL",
+          detail:
+            err instanceof Error ? err.message : "The DSL must be valid JSON.",
+        };
+      }
+    }
+
+    if (!inputError && !dslError) {
+      const res = transform(parsedInput, parsedDsl as never);
+      output = JSON.stringify(res.output, null, 2);
+      warnings = res.errors;
+    }
+
+    return { inputError, dslError, output, warnings };
+  }, [debouncedInput, debouncedDsl]);
+
+  /** Warnings grouped by output field for the output panel. */
+  const groupedWarnings = useMemo(() => {
+    const groups = new Map<string, TransformError[]>();
+    for (const w of result.warnings) {
+      const key = w.outputField ?? "(transform)";
+      const list = groups.get(key) ?? [];
+      list.push(w);
+      groups.set(key, list);
+    }
+    return [...groups.entries()];
+  }, [result.warnings]);
+
+  /** Deduped messages keyed by top-level output key, for builder row badges. */
+  const rowErrors = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const w of result.warnings) {
+      if (!w.outputField) continue;
+      // "emails[1].name" -> "emails"; plain keys pass through unchanged.
+      const key = w.outputField.replace(/\[\d+\].*/, "");
+      const list = (map[key] ??= []);
+      if (!list.includes(w.message)) list.push(w.message);
+    }
+    return map;
+  }, [result.warnings]);
+
+  useEffect(() => {
+    if (result.inputError || result.dslError || result.output == null) return;
+
+    const fingerprint = `${debouncedInput}::${debouncedDsl}::${result.warnings.length}`;
+    if (transformFingerprintRef.current === fingerprint) return;
+    transformFingerprintRef.current = fingerprint;
+
+    const baseProps = {
+      editor_mode: editorMode,
+      input_size: debouncedInput.length,
+      dsl_size: debouncedDsl.length,
+    };
+
+    if (result.warnings.length === 0) {
+      let outputFieldCount = 0;
+      try {
+        const parsed = JSON.parse(result.output) as unknown;
+        if (
+          parsed !== null &&
+          typeof parsed === "object" &&
+          !Array.isArray(parsed)
+        ) {
+          outputFieldCount = Object.keys(parsed).length;
+        } else {
+          outputFieldCount = 1;
+        }
+      } catch {
+        outputFieldCount = 0;
+      }
+      trackTransformCompleted({
+        ...baseProps,
+        warning_count: 0,
+        output_field_count: outputFieldCount,
+      });
+    } else {
+      trackTransformWarning({
+        ...baseProps,
+        warning_count: result.warnings.length,
+        warning_types: [...new Set(result.warnings.map((w) => w.type))],
+      });
+    }
+  }, [result, debouncedInput, debouncedDsl, editorMode]);
+
+  async function copyOutput() {
+    if (result.output == null) return;
+    try {
+      await navigator.clipboard.writeText(result.output);
+      trackOutputCopied({
+        output_length: result.output.length,
+        warning_count: result.warnings.length,
+      });
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard unavailable — ignore
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="flex h-screen flex-col overflow-hidden">
+      <header className="flex items-center gap-2 border-b px-4 py-3">
+        <FileJson2 className="size-5 text-muted-foreground" />
+        <h1 className="font-heading text-sm font-semibold tracking-wide">
+          JSON Transform Workbench
+        </h1>
+        <span className="ml-auto text-xs text-muted-foreground">
+          deterministic JSON transforms · no eval
+        </span>
+        <button
+          type="button"
+          onClick={() => setTemplatesOpen(true)}
+          className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          <LayoutTemplate className="size-3.5" />
+          Templates
+        </button>
+        <button
+          type="button"
+          onClick={() => setHelpOpen(true)}
+          className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          <CircleHelp className="size-3.5" />
+          Help
+        </button>
+      </header>
+
+      <HelpDialog
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        onTryExample={tryExample}
+      />
+
+      <TemplateGallery
+        open={templatesOpen}
+        onClose={() => setTemplatesOpen(false)}
+        onUse={useTemplate}
+      />
+
+      <main className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-3">
+        {/* Input panel */}
+        <section className="flex min-h-0 flex-col border-b md:border-b-0 md:border-r">
+          <div className="flex items-center justify-between border-b px-3 py-2">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Input JSON
+            </h2>
+            <button
+              type="button"
+              onClick={() => setInputText(SAMPLE_INPUT)}
+              className="rounded-md border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+              Load sample
+            </button>
+          </div>
+          <textarea
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onPaste={handleInputPaste}
+            spellCheck={false}
+            placeholder='{ "user": { "name": "Ada" } }'
+            className="min-h-0 flex-1 resize-none bg-transparent p-3 font-mono text-xs leading-relaxed outline-none placeholder:text-muted-foreground/50"
+          />
+          {fieldTree.length > 0 && (
+            <div className="flex max-h-[45%] min-h-0 flex-col border-t">
+              <p className="border-b px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Detected fields
+              </p>
+              <div className="min-h-0 overflow-auto">
+                <FieldTree fields={fieldTree} onMap={handleMapField} />
+              </div>
+            </div>
+          )}
+          {result.inputError && (
+            <ErrorBanner
+              title={result.inputError.title}
+              detail={result.inputError.detail}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+          )}
+        </section>
+
+        {/* Transform panel */}
+        <section className="flex min-h-0 flex-col border-b md:border-b-0 md:border-r">
+          <div className="flex items-center justify-between border-b px-3 py-2">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Transform
+            </h2>
+            <div className="flex items-center gap-1.5">
+              <div className="flex rounded-md border p-0.5">
+                <TabButton
+                  active={editorMode === "builder"}
+                  onClick={() => switchMode("builder")}
+                >
+                  Builder
+                </TabButton>
+                <TabButton
+                  active={editorMode === "dsl"}
+                  onClick={() => switchMode("dsl")}
+                >
+                  DSL
+                </TabButton>
+              </div>
+              <button
+                type="button"
+                onClick={loadDslSample}
+                className="rounded-md border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                Load sample
+              </button>
+            </div>
+          </div>
+
+          {editorMode === "builder" ? (
+            <TransformBuilder
+              rows={builderRows}
+              paths={pathSuggestions}
+              itemFields={(arrayPath) =>
+                itemFieldsFor(parsedInputForHints, arrayPath)
+              }
+              rowErrors={rowErrors}
+              onChange={handleRowsChange}
+            />
+          ) : (
+            <textarea
+              value={dslText}
+              onChange={(e) => setDslText(e.target.value)}
+              spellCheck={false}
+              placeholder='{ "fullName": "$user.first + \u0027 \u0027 + $user.last" }'
+              className="min-h-0 flex-1 resize-none bg-transparent p-3 font-mono text-xs leading-relaxed outline-none placeholder:text-muted-foreground/50"
+            />
+          )}
+
+          {builderNotice && (
+            <div className="border-t bg-amber-500/10 px-3 py-2">
+              <p className="font-mono text-[11px] text-amber-200/90">
+                {builderNotice}
+              </p>
+            </div>
+          )}
+          {result.dslError && (
+            <ErrorBanner
+              title={result.dslError.title}
+              detail={result.dslError.detail}
+            />
+          )}
+        </section>
+
+        {/* Output panel */}
+        <section className="flex min-h-0 flex-col">
+          <div className="flex items-center justify-between border-b px-3 py-2">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Output
+            </h2>
+            <button
+              type="button"
+              onClick={copyOutput}
+              disabled={result.output == null}
+              className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-40"
+            >
+              {copied ? (
+                <Check className="size-3" />
+              ) : (
+                <Copy className="size-3" />
+              )}
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+          <pre className="min-h-0 flex-1 overflow-auto p-3 font-mono text-xs leading-relaxed">
+            {result.output ?? (
+              <span className="text-muted-foreground/60">
+                Fix the errors on the left to see output.
+              </span>
+            )}
+          </pre>
+          {result.warnings.length > 0 && (
+            <div className="max-h-32 overflow-auto border-t bg-amber-500/10 px-3 py-2">
+              <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-amber-500">
+                Warnings
+              </p>
+              <ul className="space-y-1">
+                {groupedWarnings.map(([field, warnings]) => (
+                  <li key={field}>
+                    <p className="font-mono text-[11px] font-semibold text-amber-400">
+                      {field}
+                    </p>
+                    <ul className="space-y-0.5 pl-3">
+                      {warnings.map((w, i) => (
+                        <li
+                          key={i}
+                          className="font-mono text-[11px] text-amber-200/90"
+                        >
+                          [{w.type}] {w.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
       </main>
+    </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        active
+          ? "rounded px-2 py-0.5 text-xs bg-accent text-accent-foreground"
+          : "rounded px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:text-accent-foreground"
+      }
+    >
+      {children}
+    </button>
+  );
+}
+
+function ErrorBanner({ title, detail }: { title: string; detail: string }) {
+  return (
+    <div className="border-t bg-destructive/10 px-3 py-2">
+      <p className="text-[11px] font-medium uppercase tracking-wider text-destructive">
+        {title}
+      </p>
+      <p className="mt-0.5 font-mono text-[11px] text-destructive/90">
+        {detail}
+      </p>
     </div>
   );
 }
