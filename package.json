@@ -1,0 +1,13 @@
+{
+  "name": "json-transformer",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "core"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w web",
+    "test": "npm test -w @json-transformer/core"
+  }
+}
