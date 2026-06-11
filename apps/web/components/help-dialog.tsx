@@ -8,14 +8,14 @@ export interface HelpExample {
   dsl: Record<string, unknown>;
 }
 
-interface HelpSection {
+export interface HelpSection {
   title: string;
   description: string;
   tips: string[];
   example: HelpExample;
 }
 
-const SECTIONS: HelpSection[] = [
+export const HELP_SECTIONS: HelpSection[] = [
   {
     title: "Map field",
     description:
@@ -148,7 +148,7 @@ export function HelpDialog({ open, onClose, onTryExample }: HelpDialogProps) {
             load it into the editors.
           </p>
 
-          {SECTIONS.map((section) => (
+          {HELP_SECTIONS.map((section) => (
             <section key={section.title} className="rounded-lg border bg-card/40 p-3">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

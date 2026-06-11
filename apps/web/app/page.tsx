@@ -9,6 +9,7 @@ import {
   Copy,
   FileJson2,
   LayoutTemplate,
+  Search,
 } from "lucide-react";
 import { useDebounce } from "@/lib/use-debounce";
 import { dslToRows, newRow, rowsToDsl, type BuilderRow } from "@/lib/builder";
@@ -17,6 +18,7 @@ import { TransformBuilder } from "@/components/transform-builder";
 import { FieldTree, type FieldMapping } from "@/components/field-tree";
 import { HelpDialog, type HelpExample } from "@/components/help-dialog";
 import { TemplateGallery } from "@/components/template-gallery";
+import { WorkbenchCommandPalette } from "@/components/workbench-command-palette";
 import type { Template } from "@/lib/templates";
 import {
   trackJsonPasted,
@@ -74,6 +76,7 @@ export default function Home() {
   const [builderNotice, setBuilderNotice] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   const debouncedInput = useDebounce(inputText, 200);
   const debouncedDsl = useDebounce(dslText, 200);
@@ -345,6 +348,17 @@ export default function Home() {
         </span>
         <button
           type="button"
+          onClick={() => setCommandPaletteOpen(true)}
+          className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          <Search className="size-3.5" />
+          Commands
+          <kbd className="rounded border bg-muted/50 px-1 font-mono text-[10px] leading-none text-muted-foreground">
+            ⌘K
+          </kbd>
+        </button>
+        <button
+          type="button"
           onClick={() => setTemplatesOpen(true)}
           className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         >
@@ -371,6 +385,19 @@ export default function Home() {
         open={templatesOpen}
         onClose={() => setTemplatesOpen(false)}
         onUse={useTemplate}
+      />
+
+      <WorkbenchCommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        editorMode={editorMode}
+        onUseTemplate={useTemplate}
+        onTryExample={tryExample}
+        onSwitchMode={switchMode}
+        onLoadInputSample={() => setInputText(SAMPLE_INPUT)}
+        onLoadDslSample={loadDslSample}
+        onOpenTemplates={() => setTemplatesOpen(true)}
+        onOpenHelp={() => setHelpOpen(true)}
       />
 
       <main className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-3">
