@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { ArrowDown, ArrowUp, CircleAlert, Plus, Trash2, X } from "lucide-react";
+import { ActionMenu } from "@/components/ui/action-menu";
 import {
   newRow,
   type BuilderOperation,
@@ -125,26 +126,34 @@ export function TransformBuilder({
                     </option>
                   ))}
                 </select>
-                <IconButton
-                  label="Move up"
-                  disabled={i === 0}
-                  onClick={() => moveRow(row.id, -1)}
-                >
-                  <ArrowUp className="size-3" />
-                </IconButton>
-                <IconButton
-                  label="Move down"
-                  disabled={i === rows.length - 1}
-                  onClick={() => moveRow(row.id, 1)}
-                >
-                  <ArrowDown className="size-3" />
-                </IconButton>
-                <IconButton
-                  label="Remove field"
-                  onClick={() => removeRow(row.id)}
-                >
-                  <Trash2 className="size-3" />
-                </IconButton>
+                <ActionMenu
+                  triggerLabel="Field actions"
+                  triggerClassName="size-7 rounded-md border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  actions={[
+                    {
+                      id: "move-up",
+                      label: "Move up",
+                      icon: <ArrowUp className="size-3.5" />,
+                      disabled: i === 0,
+                      onSelect: () => moveRow(row.id, -1),
+                    },
+                    {
+                      id: "move-down",
+                      label: "Move down",
+                      icon: <ArrowDown className="size-3.5" />,
+                      disabled: i === rows.length - 1,
+                      onSelect: () => moveRow(row.id, 1),
+                    },
+                    { type: "separator" },
+                    {
+                      id: "remove",
+                      label: "Remove field",
+                      icon: <Trash2 className="size-3.5" />,
+                      variant: "destructive",
+                      onSelect: () => removeRow(row.id),
+                    },
+                  ]}
+                />
               </div>
 
               <div className="mt-1.5 flex items-center gap-1.5">

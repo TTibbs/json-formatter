@@ -52,6 +52,8 @@
   --color-file-tree-background: var(--file-tree-background);
   --color-copy-button-foreground: var(--copy-button-foreground);
   --color-copy-button-background: var(--copy-button-background);
+  --color-action-menu-foreground: var(--action-menu-foreground);
+  --color-action-menu-background: var(--action-menu-background);
 }
 
 :root {
@@ -93,6 +95,8 @@
   --file-tree-foreground: oklch(0.24 0.045 220);
   --copy-button-background: oklch(0.98 0.008 210);
   --copy-button-foreground: oklch(0.24 0.05 210);
+  --action-menu-background: oklch(0.99 0.005 255);
+  --action-menu-foreground: oklch(0.22 0.03 255);
 }
 
 .dark {
@@ -133,6 +137,8 @@
   --file-tree-foreground: oklch(0.95 0.018 220);
   --copy-button-background: oklch(0.21 0.018 210);
   --copy-button-foreground: oklch(0.95 0.018 210);
+  --action-menu-background: oklch(0.2 0.02 255);
+  --action-menu-foreground: oklch(0.94 0.02 255);
 }
 
 @layer base {
