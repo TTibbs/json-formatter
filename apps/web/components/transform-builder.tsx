@@ -1,14 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import {
-  ArrowDown,
-  ArrowUp,
-  CircleAlert,
-  Plus,
-  Trash2,
-  X,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, CircleAlert, Plus, Trash2, X } from "lucide-react";
 import {
   newRow,
   type BuilderOperation,
@@ -101,133 +94,135 @@ export function TransformBuilder({
         {rows.map((row, i) => {
           const errors = rowErrors[row.outputKey.trim()] ?? [];
           return (
-          <div
-            key={row.id}
-            className={`rounded-lg border bg-card/40 p-2 ${
-              errors.length > 0 ? "border-amber-500/40" : ""
-            }`}
-          >
-            <div className="flex items-center gap-1.5">
-              <input
-                value={row.outputKey}
-                onChange={(e) =>
-                  updateRow(row.id, { outputKey: e.target.value })
-                }
-                placeholder="outputField"
-                spellCheck={false}
-                className="w-0 min-w-0 flex-1 rounded-md border bg-transparent px-2 py-1 font-mono text-xs outline-none placeholder:text-muted-foreground/50 focus:border-ring"
-              />
-              <select
-                value={row.operation}
-                onChange={(e) =>
-                  updateRow(row.id, {
-                    operation: e.target.value as BuilderOperation,
-                  })
-                }
-                className="rounded-md border bg-background px-1.5 py-1 text-xs text-foreground outline-none focus:border-ring"
-              >
-                {OPERATIONS.map((op) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
-              <IconButton
-                label="Move up"
-                disabled={i === 0}
-                onClick={() => moveRow(row.id, -1)}
-              >
-                <ArrowUp className="size-3" />
-              </IconButton>
-              <IconButton
-                label="Move down"
-                disabled={i === rows.length - 1}
-                onClick={() => moveRow(row.id, 1)}
-              >
-                <ArrowDown className="size-3" />
-              </IconButton>
-              <IconButton
-                label="Remove field"
-                onClick={() => removeRow(row.id)}
-              >
-                <Trash2 className="size-3" />
-              </IconButton>
-            </div>
-
-            <div className="mt-1.5 flex items-center gap-1.5">
-              {row.operation === "path" && (
-                <ParamInput
-                  value={row.source}
-                  onChange={(source) => updateRow(row.id, { source })}
-                  placeholder="user.name"
-                  list={valuePathsId}
+            <div
+              key={row.id}
+              className={`rounded-lg border bg-card/40 p-2 ${
+                errors.length > 0 ? "border-amber-500/40" : ""
+              }`}
+            >
+              <div className="flex items-center gap-1.5">
+                <input
+                  value={row.outputKey}
+                  onChange={(e) =>
+                    updateRow(row.id, { outputKey: e.target.value })
+                  }
+                  placeholder="outputField"
+                  spellCheck={false}
+                  className="w-0 min-w-0 flex-1 rounded-md border bg-transparent px-2 py-1 font-mono text-xs outline-none placeholder:text-muted-foreground/50 focus:border-ring"
                 />
-              )}
+                <select
+                  value={row.operation}
+                  onChange={(e) =>
+                    updateRow(row.id, {
+                      operation: e.target.value as BuilderOperation,
+                    })
+                  }
+                  className="rounded-md border bg-background px-1.5 py-1 text-xs text-foreground outline-none focus:border-ring"
+                >
+                  {OPERATIONS.map((op) => (
+                    <option key={op.value} value={op.value}>
+                      {op.label}
+                    </option>
+                  ))}
+                </select>
+                <IconButton
+                  label="Move up"
+                  disabled={i === 0}
+                  onClick={() => moveRow(row.id, -1)}
+                >
+                  <ArrowUp className="size-3" />
+                </IconButton>
+                <IconButton
+                  label="Move down"
+                  disabled={i === rows.length - 1}
+                  onClick={() => moveRow(row.id, 1)}
+                >
+                  <ArrowDown className="size-3" />
+                </IconButton>
+                <IconButton
+                  label="Remove field"
+                  onClick={() => removeRow(row.id)}
+                >
+                  <Trash2 className="size-3" />
+                </IconButton>
+              </div>
 
-              {row.operation === "expression" && (
-                <ParamInput
-                  value={row.source}
-                  onChange={(source) => updateRow(row.id, { source })}
-                  placeholder="$user.first + ' ' + $user.last"
-                />
-              )}
-
-              {row.operation === "map" && (
-                <>
+              <div className="mt-1.5 flex items-center gap-1.5">
+                {row.operation === "path" && (
                   <ParamInput
                     value={row.source}
                     onChange={(source) => updateRow(row.id, { source })}
-                    placeholder="users"
-                    list={arrayPathsId}
+                    placeholder="user.name"
+                    list={valuePathsId}
                   />
-                  <span className="text-xs text-muted-foreground/70">[].</span>
-                  <MapSelectInput
+                )}
+
+                {row.operation === "expression" && (
+                  <ParamInput
+                    value={row.source}
+                    onChange={(source) => updateRow(row.id, { source })}
+                    placeholder="$user.first + ' ' + $user.last"
+                  />
+                )}
+
+                {row.operation === "map" && (
+                  <>
+                    <ParamInput
+                      value={row.source}
+                      onChange={(source) => updateRow(row.id, { source })}
+                      placeholder="users"
+                      list={arrayPathsId}
+                    />
+                    <span className="text-xs text-muted-foreground/70">
+                      [].
+                    </span>
+                    <MapSelectInput
+                      row={row}
+                      fields={itemFields(row.source)}
+                      onChange={(select) => updateRow(row.id, { select })}
+                    />
+                  </>
+                )}
+
+                {row.operation === "literal" && (
+                  <ParamInput
+                    value={row.value}
+                    onChange={(value) => updateRow(row.id, { value })}
+                    placeholder="e.g. api, 42, true"
+                  />
+                )}
+
+                {row.operation === "concat" && (
+                  <ConcatParams
                     row={row}
-                    fields={itemFields(row.source)}
-                    onChange={(select) => updateRow(row.id, { select })}
+                    listId={valuePathsId}
+                    onChange={(patch) => updateRow(row.id, patch)}
                   />
-                </>
-              )}
+                )}
 
-              {row.operation === "literal" && (
-                <ParamInput
-                  value={row.value}
-                  onChange={(value) => updateRow(row.id, { value })}
-                  placeholder="e.g. api, 42, true"
-                />
-              )}
+                {row.operation === "condition" && (
+                  <ConditionParams
+                    row={row}
+                    listId={valuePathsId}
+                    onChange={(patch) => updateRow(row.id, patch)}
+                  />
+                )}
+              </div>
 
-              {row.operation === "concat" && (
-                <ConcatParams
-                  row={row}
-                  listId={valuePathsId}
-                  onChange={(patch) => updateRow(row.id, patch)}
-                />
-              )}
-
-              {row.operation === "condition" && (
-                <ConditionParams
-                  row={row}
-                  listId={valuePathsId}
-                  onChange={(patch) => updateRow(row.id, patch)}
-                />
+              {errors.length > 0 && (
+                <div className="mt-1.5 space-y-0.5">
+                  {errors.map((message, j) => (
+                    <p
+                      key={j}
+                      className="flex items-start gap-1 text-[11px] text-amber-500"
+                    >
+                      <CircleAlert className="mt-px size-3 shrink-0" />
+                      {message}
+                    </p>
+                  ))}
+                </div>
               )}
             </div>
-
-            {errors.length > 0 && (
-              <div className="mt-1.5 space-y-0.5">
-                {errors.map((message, j) => (
-                  <p
-                    key={j}
-                    className="flex items-start gap-1 text-[11px] text-amber-500"
-                  >
-                    <CircleAlert className="mt-px size-3 shrink-0" />
-                    {message}
-                  </p>
-                ))}
-              </div>
-            )}
-          </div>
           );
         })}
       </div>

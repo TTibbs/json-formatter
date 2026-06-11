@@ -4,9 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { transform, type TransformError } from "@json-transformer/core";
 import { inferFields } from "@json-transformer/core";
 import {
-  Check,
   CircleHelp,
-  Copy,
   File,
   FileJson2,
   LayoutTemplate,
@@ -17,6 +15,7 @@ import { useDebounce } from "@/lib/use-debounce";
 import { dslToRows, newRow, rowsToDsl, type BuilderRow } from "@/lib/builder";
 import { extractPaths, itemFieldsFor } from "@/lib/json-paths";
 import { TransformBuilder } from "@/components/transform-builder";
+import { CopyButton } from "@/components/ui/copy-button";
 import { FileTree } from "@/components/ui/file-tree";
 import { HelpDialog, type HelpExample } from "@/components/help-dialog";
 import {
@@ -77,7 +76,6 @@ type EditorMode = "builder" | "dsl";
 export default function Home() {
   const [inputText, setInputText] = useState(SAMPLE_INPUT);
   const [dslText, setDslText] = useState(SAMPLE_DSL);
-  const [copied, setCopied] = useState(false);
   const [editorMode, setEditorMode] = useState<EditorMode>("builder");
   const [builderRows, setBuilderRows] = useState<BuilderRow[]>(
     () => dslToRows(SAMPLE_DSL) ?? [],
@@ -335,21 +333,6 @@ export default function Home() {
     }
   }, [result, debouncedInput, debouncedDsl, editorMode]);
 
-  async function copyOutput() {
-    if (result.output == null) return;
-    try {
-      await navigator.clipboard.writeText(result.output);
-      trackOutputCopied({
-        output_length: result.output.length,
-        warning_count: result.warnings.length,
-      });
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // clipboard unavailable — ignore
-    }
-  }
-
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       <header className="flex items-center gap-2 border-b px-4 py-3">
@@ -570,19 +553,21 @@ export default function Home() {
             <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Output
             </h2>
-            <button
-              type="button"
-              onClick={copyOutput}
+            <CopyButton
+              value={result.output ?? ""}
               disabled={result.output == null}
-              className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-40"
-            >
-              {copied ? (
-                <Check className="size-3" />
-              ) : (
-                <Copy className="size-3" />
-              )}
-              {copied ? "Copied" : "Copy"}
-            </button>
+              size="xs"
+              variant="outline"
+              copiedText="Copied"
+              className="text-xs text-muted-foreground"
+              onCopied={() => {
+                if (result.output == null) return;
+                trackOutputCopied({
+                  output_length: result.output.length,
+                  warning_count: result.warnings.length,
+                });
+              }}
+            />
           </div>
           <pre className="min-h-0 flex-1 overflow-auto p-3 font-mono text-xs leading-relaxed">
             {result.output ?? (
