@@ -48,6 +48,8 @@
   --radius-4xl: calc(var(--radius) * 2.6);
   --color-command-palette-foreground: var(--command-palette-foreground);
   --color-command-palette-background: var(--command-palette-background);
+  --color-file-tree-foreground: var(--file-tree-foreground);
+  --color-file-tree-background: var(--file-tree-background);
 }
 
 :root {
@@ -85,6 +87,8 @@
   --sidebar-ring: oklch(0.723 0.014 214.4);
   --command-palette-background: oklch(0.99 0.004 255);
   --command-palette-foreground: oklch(0.22 0.03 255);
+  --file-tree-background: oklch(0.98 0.008 220);
+  --file-tree-foreground: oklch(0.24 0.045 220);
 }
 
 .dark {
@@ -121,6 +125,8 @@
   --sidebar-ring: oklch(0.56 0.021 213.5);
   --command-palette-background: oklch(0.2 0.02 255);
   --command-palette-foreground: oklch(0.94 0.02 255);
+  --file-tree-background: oklch(0.21 0.018 220);
+  --file-tree-foreground: oklch(0.95 0.018 220);
 }
 
 @layer base {

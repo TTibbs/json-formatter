@@ -7,16 +7,25 @@ import {
   Check,
   CircleHelp,
   Copy,
+  File,
   FileJson2,
   LayoutTemplate,
+  Plus,
   Search,
 } from "lucide-react";
 import { useDebounce } from "@/lib/use-debounce";
 import { dslToRows, newRow, rowsToDsl, type BuilderRow } from "@/lib/builder";
 import { extractPaths, itemFieldsFor } from "@/lib/json-paths";
 import { TransformBuilder } from "@/components/transform-builder";
-import { FieldTree, type FieldMapping } from "@/components/field-tree";
+import { FileTree } from "@/components/ui/file-tree";
 import { HelpDialog, type HelpExample } from "@/components/help-dialog";
+import {
+  fieldNodesToFileTree,
+  fieldTypeLabel,
+  isFieldNodeMeta,
+  mappingFor,
+  type FieldMapping,
+} from "@/lib/field-mapping";
 import { TemplateGallery } from "@/components/template-gallery";
 import { WorkbenchCommandPalette } from "@/components/workbench-command-palette";
 import type { Template } from "@/lib/templates";
@@ -95,9 +104,14 @@ export default function Home() {
     [parsedInputForHints],
   );
 
-  const fieldTree = useMemo(
+  const detectedFields = useMemo(
     () => inferFields(parsedInputForHints),
     [parsedInputForHints],
+  );
+
+  const detectedFieldTreeData = useMemo(
+    () => fieldNodesToFileTree(detectedFields),
+    [detectedFields],
   );
 
   function handleRowsChange(rows: BuilderRow[]) {
@@ -423,13 +437,56 @@ export default function Home() {
             placeholder='{ "user": { "name": "Ada" } }'
             className="min-h-0 flex-1 resize-none bg-transparent p-3 font-mono text-xs leading-relaxed outline-none placeholder:text-muted-foreground/50"
           />
-          {fieldTree.length > 0 && (
+          {detectedFields.length > 0 && (
             <div className="flex max-h-[45%] min-h-0 flex-col border-t">
               <p className="border-b px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                 Detected fields
               </p>
               <div className="min-h-0 overflow-auto">
-                <FieldTree fields={fieldTree} onMap={handleMapField} />
+                <FileTree
+                  data={detectedFieldTreeData}
+                  variant="ghost"
+                  size="sm"
+                  defaultExpanded={true}
+                  aria-label="Detected fields"
+                  className="px-2 py-1.5"
+                  getIcon={(node) =>
+                    node.type === "file" ? (
+                      <File className="size-3 shrink-0 text-muted-foreground" />
+                    ) : null
+                  }
+                  renderTrailing={(node) => {
+                    if (!isFieldNodeMeta(node.meta)) return null;
+                    const { fieldNode, arrayContext } = node.meta;
+                    const mapping = mappingFor(fieldNode, arrayContext);
+
+                    return (
+                      <>
+                        <span className="rounded bg-muted px-1 py-px text-[9px] uppercase tracking-wide text-muted-foreground/80">
+                          {fieldTypeLabel(fieldNode)}
+                        </span>
+                        {mapping ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMapField(mapping);
+                            }}
+                            title={
+                              mapping.operation === "map"
+                                ? `Map array ${mapping.source}${mapping.select ? ` -> ${mapping.select}` : ""}`
+                                : `Map field ${mapping.source}`
+                            }
+                            className="ml-auto hidden items-center gap-0.5 rounded border px-1 py-px text-[10px] text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground group-hover:flex"
+                          >
+                            <Plus className="size-2.5" />
+                            map
+                          </button>
+                        ) : null}
+                      </>
+                    );
+                  }}
+                />
               </div>
             </div>
           )}
