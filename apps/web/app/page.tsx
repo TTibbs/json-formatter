@@ -34,7 +34,10 @@ import { TemplateGallery } from "@/components/template-gallery";
 import { WorkbenchCommandPalette } from "@/components/workbench-command-palette";
 import type { Template } from "@/lib/templates";
 import {
+  trackFieldMapped,
+  trackHelpExampleLoaded,
   trackJsonPasted,
+  trackModeSwitched,
   trackOutputCopied,
   trackTemplateLoaded,
   trackTransformCompleted,
@@ -135,6 +138,7 @@ export default function Home() {
       setBuilderRows(rows);
     }
     setBuilderNotice(null);
+    trackModeSwitched({ from_mode: editorMode, to_mode: mode });
     setEditorMode(mode);
   }
 
@@ -172,6 +176,7 @@ export default function Home() {
         select: mapping.select ?? "",
       }),
     ]);
+    trackFieldMapped({ operation: mapping.operation, editor_mode: editorMode });
     setBuilderNotice(null);
     setEditorMode("builder");
   }
@@ -183,6 +188,7 @@ export default function Home() {
     setDslText(dslJson);
     setBuilderRows(dslToRows(dslJson) ?? []);
     setBuilderNotice(null);
+    trackHelpExampleLoaded();
     setHelpOpen(false);
   }
 

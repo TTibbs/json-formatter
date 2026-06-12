@@ -10,6 +10,10 @@ import {
   type ConditionComparator,
 } from "@/lib/builder";
 import type { PathSuggestion } from "@/lib/json-paths";
+import {
+  trackBuilderFieldAdded,
+  trackBuilderFieldRemoved,
+} from "@/lib/analytics";
 
 const OPERATIONS: { value: BuilderOperation; label: string }[] = [
   { value: "path", label: "Map field" },
@@ -60,6 +64,7 @@ export function TransformBuilder({
   }
 
   function removeRow(id: string) {
+    trackBuilderFieldRemoved();
     onChange(rows.filter((r) => r.id !== id));
   }
 
@@ -241,7 +246,10 @@ export function TransformBuilder({
       <div className="shrink-0 border-t p-2">
         <button
           type="button"
-          onClick={() => onChange([...rows, newRow()])}
+          onClick={() => {
+            trackBuilderFieldAdded();
+            onChange([...rows, newRow()]);
+          }}
           className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         >
           <Plus className="size-3" />

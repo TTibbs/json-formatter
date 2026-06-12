@@ -67,3 +67,29 @@ export function trackJsonImportFailed(props: {
 }): void {
   capture("json_import_failed", props);
 }
+
+export function trackModeSwitched(props: {
+  from_mode: EditorMode;
+  to_mode: EditorMode;
+}): void {
+  capture("mode_switched", props);
+}
+
+export function trackFieldMapped(props: {
+  operation: "path" | "map";
+  editor_mode: EditorMode;
+}): void {
+  capture("field_mapped", props);
+}
+
+export function trackBuilderFieldAdded(): void {
+  capture("builder_field_added");
+}
+
+export function trackBuilderFieldRemoved(): void {
+  capture("builder_field_removed");
+}
+
+export function trackHelpExampleLoaded(): void {
+  capture("help_example_loaded");
+}
