@@ -55,3 +55,15 @@ export function trackOutputCopied(props: {
 }): void {
   capture("output_copied", props);
 }
+
+export function trackJsonImported(props: {
+  method: "drop" | "browse";
+}): void {
+  capture("json_imported", props);
+}
+
+export function trackJsonImportFailed(props: {
+  reason: "invalid_json" | "invalid_type";
+}): void {
+  capture("json_import_failed", props);
+}

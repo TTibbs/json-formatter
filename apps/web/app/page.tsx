@@ -15,6 +15,11 @@ import { useDebounce } from "@/lib/use-debounce";
 import { dslToRows, newRow, rowsToDsl, type BuilderRow } from "@/lib/builder";
 import { extractPaths, itemFieldsFor } from "@/lib/json-paths";
 import { TransformBuilder } from "@/components/transform-builder";
+import { JsonDropzone } from "@/components/json-dropzone";
+import {
+  LineNumberPre,
+  LineNumberTextarea,
+} from "@/components/line-number-textarea";
 import { CopyButton } from "@/components/ui/copy-button";
 import { FileTree } from "@/components/ui/file-tree";
 import { HelpDialog, type HelpExample } from "@/components/help-dialog";
@@ -334,8 +339,8 @@ export default function Home() {
   }, [result, debouncedInput, debouncedDsl, editorMode]);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      <header className="flex items-center gap-2 border-b px-4 py-3">
+    <div className="flex h-full flex-col overflow-hidden">
+      <header className="flex shrink-0 items-center gap-2 border-b px-4 py-3">
         <FileJson2 className="size-5 text-muted-foreground" />
         <h1 className="font-heading text-sm font-semibold tracking-wide">
           JSON Transform Workbench
@@ -397,9 +402,9 @@ export default function Home() {
         onOpenHelp={() => setHelpOpen(true)}
       />
 
-      <main className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-3">
+      <main className="grid min-h-0 flex-1 overflow-hidden grid-cols-1 md:grid-cols-3 md:grid-rows-[minmax(0,1fr)]">
         {/* Input panel */}
-        <section className="flex min-h-0 flex-col border-b md:border-b-0 md:border-r">
+        <section className="flex min-h-0 flex-col overflow-hidden border-b md:border-b-0 md:border-r">
           <div className="flex items-center justify-between border-b px-3 py-2">
             <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Input JSON
@@ -412,14 +417,18 @@ export default function Home() {
               Load sample
             </button>
           </div>
-          <textarea
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onPaste={handleInputPaste}
-            spellCheck={false}
-            placeholder='{ "user": { "name": "Ada" } }'
-            className="min-h-0 flex-1 resize-none bg-transparent p-3 font-mono text-xs leading-relaxed outline-none placeholder:text-muted-foreground/50"
-          />
+          <JsonDropzone
+            onImport={setInputText}
+            hintVisible={inputText.trim() === ""}
+          >
+            <LineNumberTextarea
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onPaste={handleInputPaste}
+              spellCheck={false}
+              placeholder='{ "user": { "name": "Ada" } }'
+            />
+          </JsonDropzone>
           {detectedFields.length > 0 && (
             <div className="flex max-h-[45%] min-h-0 flex-col border-t">
               <p className="border-b px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -482,8 +491,8 @@ export default function Home() {
         </section>
 
         {/* Transform panel */}
-        <section className="flex min-h-0 flex-col border-b md:border-b-0 md:border-r">
-          <div className="flex items-center justify-between border-b px-3 py-2">
+        <section className="flex min-h-0 flex-col overflow-hidden border-b md:border-b-0 md:border-r">
+          <div className="flex shrink-0 items-center justify-between border-b px-3 py-2">
             <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Transform
             </h2>
@@ -528,12 +537,12 @@ export default function Home() {
               onChange={(e) => setDslText(e.target.value)}
               spellCheck={false}
               placeholder='{ "fullName": "$user.first + \u0027 \u0027 + $user.last" }'
-              className="min-h-0 flex-1 resize-none bg-transparent p-3 font-mono text-xs leading-relaxed outline-none placeholder:text-muted-foreground/50"
+              className="h-0 min-h-0 flex-1 resize-none overflow-auto bg-transparent p-3 font-mono text-xs leading-relaxed outline-none placeholder:text-muted-foreground/50"
             />
           )}
 
           {builderNotice && (
-            <div className="border-t bg-amber-500/10 px-3 py-2">
+            <div className="shrink-0 border-t bg-amber-500/10 px-3 py-2">
               <p className="font-mono text-[11px] text-amber-200/90">
                 {builderNotice}
               </p>
@@ -548,7 +557,7 @@ export default function Home() {
         </section>
 
         {/* Output panel */}
-        <section className="flex min-h-0 flex-col">
+        <section className="flex min-h-0 flex-col overflow-hidden">
           <div className="flex items-center justify-between border-b px-3 py-2">
             <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Output
@@ -569,13 +578,10 @@ export default function Home() {
               }}
             />
           </div>
-          <pre className="min-h-0 flex-1 overflow-auto p-3 font-mono text-xs leading-relaxed">
-            {result.output ?? (
-              <span className="text-muted-foreground/60">
-                Fix the errors on the left to see output.
-              </span>
-            )}
-          </pre>
+          <LineNumberPre
+            value={result.output}
+            emptyMessage="Fix the errors on the left to see output."
+          />
           {result.warnings.length > 0 && (
             <div className="max-h-32 overflow-auto border-t bg-amber-500/10 px-3 py-2">
               <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-amber-500">
@@ -634,7 +640,7 @@ function TabButton({
 
 function ErrorBanner({ title, detail }: { title: string; detail: string }) {
   return (
-    <div className="border-t bg-destructive/10 px-3 py-2">
+    <div className="shrink-0 border-t bg-destructive/10 px-3 py-2">
       <p className="text-[11px] font-medium uppercase tracking-wider text-destructive">
         {title}
       </p>

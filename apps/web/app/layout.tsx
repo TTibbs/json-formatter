@@ -38,7 +38,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={cn(
-        "h-full",
+        "h-full overflow-hidden",
         "dark",
         "antialiased",
         geistSans.variable,
@@ -48,7 +48,7 @@ export default function RootLayout({
         ralewayHeading.variable,
       )}
     >
-      <body className="h-full min-h-full flex flex-col">{children}</body>
+      <body className="flex h-full flex-col overflow-hidden">{children}</body>
     </html>
   );
 }

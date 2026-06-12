@@ -73,7 +73,7 @@ export function TransformBuilder({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden">
       <datalist id={valuePathsId}>
         {valuePaths.map((p) => (
           <option key={p.path} value={p.path} />
@@ -85,7 +85,8 @@ export function TransformBuilder({
         ))}
       </datalist>
 
-      <div className="min-h-0 flex-1 space-y-2 overflow-auto p-3">
+      <div className="h-0 min-h-0 flex-1 overflow-y-auto p-3">
+        <div className="space-y-2">
         {rows.length === 0 && (
           <p className="px-1 py-2 text-xs text-muted-foreground/70">
             No output fields yet. Add one below to start shaping your output.
@@ -234,9 +235,10 @@ export function TransformBuilder({
             </div>
           );
         })}
+        </div>
       </div>
 
-      <div className="border-t p-2">
+      <div className="shrink-0 border-t p-2">
         <button
           type="button"
           onClick={() => onChange([...rows, newRow()])}

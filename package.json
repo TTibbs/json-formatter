@@ -8,6 +8,6 @@
   "scripts": {
     "dev": "npm run dev -w web",
     "build": "npm run build -w web",
-    "test": "npm test -w @json-transformer/core"
+    "test": "npm test -w @json-transformer/core && npm test -w web"
   }
 }
