@@ -1,6 +1,6 @@
 "use client";
 
-import type { GraphNode, GraphNodeType } from "@/lib/graph";
+import type { GraphNode, GraphNodeType } from "@json-transformer/core";
 
 interface NodeConfigPanelProps {
   node: GraphNode;
@@ -33,9 +33,7 @@ export function NodeConfigPanel({
           <input
             className="mt-1 w-full rounded border bg-background px-2 py-1 font-mono text-xs"
             value={cfg.source}
-            onChange={(e) =>
-              onChange({ ...cfg, source: e.target.value })
-            }
+            onChange={(e) => onChange({ ...cfg, source: e.target.value })}
           />
         </label>
         <label className="block text-[11px] text-muted-foreground">
@@ -55,7 +53,8 @@ export function NodeConfigPanel({
           />
         </label>
         <p className="text-[10px] text-muted-foreground">
-          Body nodes: {allNodeIds.filter((id) => id !== node.id).join(", ") || "none"}
+          Body nodes:{" "}
+          {allNodeIds.filter((id) => id !== node.id).join(", ") || "none"}
         </p>
       </div>
     );
@@ -100,9 +99,7 @@ export function NodeConfigPanel({
           <input
             className="mt-1 w-full rounded border bg-background px-2 py-1 font-mono text-xs"
             value={from}
-            onChange={(e) =>
-              onChange({ map: { [e.target.value]: to } })
-            }
+            onChange={(e) => onChange({ map: { [e.target.value]: to } })}
           />
         </label>
         <label className="block text-[11px] text-muted-foreground">
@@ -110,9 +107,7 @@ export function NodeConfigPanel({
           <input
             className="mt-1 w-full rounded border bg-background px-2 py-1 font-mono text-xs"
             value={to}
-            onChange={(e) =>
-              onChange({ map: { [from]: e.target.value } })
-            }
+            onChange={(e) => onChange({ map: { [from]: e.target.value } })}
           />
         </label>
       </div>
@@ -147,7 +142,10 @@ export function NodeConfigPanel({
         <textarea
           className="mt-1 h-32 w-full resize-none rounded border bg-background px-2 py-1 font-mono text-[11px]"
           value={JSON.stringify(
-            (node.config as { root?: unknown })?.root ?? { type: "object", entries: {} },
+            (node.config as { root?: unknown })?.root ?? {
+              type: "object",
+              entries: {},
+            },
             null,
             2,
           )}
@@ -166,7 +164,8 @@ export function NodeConfigPanel({
 
   return (
     <p className="text-xs text-muted-foreground">
-      Configuration for {node.type} — edit graph JSON in DSL tab for advanced setup.
+      Configuration for {node.type} — edit graph JSON in DSL tab for advanced
+      setup.
     </p>
   );
 }
