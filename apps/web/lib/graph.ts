@@ -24,27 +24,61 @@ export function createEmptyGraph(): TransformGraph {
   };
 }
 
+/**
+ * Default graph sample — MVP 2 flow: reshape each user, then project fields.
+ *
+ *   input → map_users → project_contacts → output
+ *              └─ (per item) nest_notifications
+ *
+ * Output: { names: [...], emails: [...] } from users after notifications
+ * are nested under settings.notifications on each item.
+ */
 export function createSampleGraph(): TransformGraph {
   return {
-    id: "sample-notifications",
+    id: "team-directory-graph",
     version: 2,
     nodes: [
       { id: "input", type: "input" },
       {
-        id: "nest1",
-        type: "nest",
-        config: { from: "notifications", to: "settings.notifications" },
+        id: "map_users",
+        type: "map",
+        config: { source: "users", body: ["nest_notifications"] },
       },
       {
-        id: "map1",
-        type: "map",
-        config: { source: "users", body: ["nest1"] },
+        id: "nest_notifications",
+        type: "nest",
+        config: {
+          from: "notifications",
+          to: "settings.notifications",
+        },
+      },
+      {
+        id: "project_contacts",
+        type: "project",
+        config: {
+          root: {
+            type: "object",
+            entries: {
+              names: {
+                type: "map",
+                source: "users",
+                select: { type: "path", value: "name" },
+              },
+              emails: {
+                type: "map",
+                source: "users",
+                select: { type: "path", value: "email" },
+              },
+            },
+          },
+        },
       },
       { id: "output", type: "output" },
     ],
     edges: [
-      { from: "input", to: "map1" },
-      { from: "map1", to: "output" },
+      { from: "input", to: "map_users" },
+      { from: "map_users", to: "project_contacts" },
+      { from: "project_contacts", to: "output" },
     ],
   };
 }
@@ -64,7 +98,7 @@ export function defaultConfigForType(type: GraphNodeType): GraphNode["config"] {
     case "map":
       return { source: "users", body: [] };
     case "nest":
-      return { from: "field", to: "nested.field" };
+      return { from: "notifications", to: "settings.notifications" };
     case "rename":
       return { map: { oldKey: "newKey" } };
     case "remove":
@@ -74,7 +108,23 @@ export function defaultConfigForType(type: GraphNodeType): GraphNode["config"] {
     case "flatten":
       return { mappings: { flatKey: "nested.path" } };
     case "project":
-      return { root: { type: "object", entries: {} } };
+      return {
+        root: {
+          type: "object",
+          entries: {
+            names: {
+              type: "map",
+              source: "users",
+              select: { type: "path", value: "name" },
+            },
+            emails: {
+              type: "map",
+              source: "users",
+              select: { type: "path", value: "email" },
+            },
+          },
+        },
+      };
     default:
       return {};
   }

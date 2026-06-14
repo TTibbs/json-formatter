@@ -247,11 +247,10 @@ describe("builder rows <-> DSL (via core AST)", () => {
     const { output, errors } = transform(input, dsl);
     expect(errors).toEqual([]);
     expect(output).toMatchObject({
-      firstItem: "Keyboard",
       names: ["Ada", "Linus"],
       emails: ["ada@example.com", "linus@example.com"],
-      notifications: [["ping", "mention"], ["alert"]],
-      source: "api",
+      roles: ["admin", "member"],
+      exportedFrom: "team-directory",
     });
   });
 });

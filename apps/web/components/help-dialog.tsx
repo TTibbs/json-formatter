@@ -75,7 +75,7 @@ export const HELP_SECTIONS: HelpSection[] = [
       dsl: {
         names: "users[].name",
         emails: "users[].email",
-        notifications: "users[].notifications",
+        roles: "users[].role",
       },
     },
   },
@@ -110,12 +110,12 @@ export const HELP_SECTIONS: HelpSection[] = [
   {
     title: "Graph editor",
     description:
-      "Build transforms as a DAG of nodes connected by edges. Use the Graph tab to add map/nest/rename nodes, connect input → map → output, and run directly via runGraph.",
+      "Chain nodes with edges: structural steps (map, nest) reshape the document, then a project node maps output fields. Same engine as DSL — DSL and $pipeline compile to this graph internally.",
     tips: [
-      "input and output nodes are required terminals",
-      "Map array nodes reference body node ids (nest, rename, remove) executed per item",
-      "Legacy DSL and $pipeline compile to graphs automatically when using transform()",
-      "POST /api/graph/run accepts { graph, input } for server-side execution",
+      "Flow: input → map_users → project → output; nest runs inside map per array item",
+      "map_users loops over users; nest_notifications moves notifications → settings.notifications on each item",
+      "project_contacts outputs names and emails arrays from the reshaped users",
+      "Legacy DSL compiles to the same graph via transform(); POST /api/graph/run runs graphs server-side",
     ],
     example: {
       input: JSON.parse(SAMPLE_INPUT),
