@@ -8,8 +8,7 @@ import {
 } from "@/components/ui/command-palette";
 import { HELP_SECTIONS, type HelpExample } from "@/components/help-dialog";
 import { TEMPLATES, type Template } from "@/lib/templates";
-
-type EditorMode = "builder" | "dsl";
+import type { EditorMode } from "@/types/types";
 
 export interface WorkbenchCommandPaletteProps {
   open: boolean;

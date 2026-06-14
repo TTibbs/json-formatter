@@ -139,16 +139,106 @@
   --copy-button-foreground: oklch(0.95 0.018 210);
   --action-menu-background: oklch(0.2 0.02 255);
   --action-menu-foreground: oklch(0.94 0.02 255);
+  /* App is dark-only — scrollbar tokens live here, not in :root */
+  --scrollbar-size: 5px;
+  --scrollbar-track: oklch(0.115 0.014 228 / 72%);
+  --scrollbar-thumb: oklch(0.34 0.035 215);
+  --scrollbar-thumb-hover: oklch(0.48 0.07 195);
+  --scrollbar-thumb-active: oklch(0.58 0.11 175);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
+  /* Dark-only scrollbar — html always has class "dark" */
+  .dark,
+  .dark * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  .dark *::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
+  }
+
+  .dark *::-webkit-scrollbar-track {
+    background:
+      linear-gradient(
+        to right,
+        oklch(1 0 0 / 3%) 0%,
+        transparent 12%,
+        transparent 88%,
+        oklch(0 0 0 / 18%) 100%
+      ),
+      var(--scrollbar-track);
+    border-radius: 4px;
+  }
+
+  .dark *::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    border: 1px solid oklch(1 0 0 / 7%);
+    background:
+      linear-gradient(
+        180deg,
+        oklch(0.42 0.045 205) 0%,
+        var(--scrollbar-thumb) 45%,
+        oklch(0.28 0.03 228) 100%
+      );
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 14%),
+      0 0 0 1px oklch(0 0 0 / 22%);
+    transition:
+      background 160ms ease,
+      box-shadow 160ms ease,
+      border-color 160ms ease;
+  }
+
+  .dark *::-webkit-scrollbar-thumb:hover {
+    border-color: oklch(0.65 0.1 175 / 35%);
+    background:
+      linear-gradient(
+        180deg,
+        oklch(0.56 0.09 185) 0%,
+        var(--scrollbar-thumb-hover) 50%,
+        oklch(0.38 0.06 210) 100%
+      );
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 18%),
+      0 0 0 1px oklch(0 0 0 / 18%),
+      0 0 10px oklch(0.55 0.1 175 / 22%);
+  }
+
+  .dark *::-webkit-scrollbar-thumb:active {
+    background:
+      linear-gradient(
+        180deg,
+        var(--scrollbar-thumb-active) 0%,
+        oklch(0.45 0.08 185) 100%
+      );
+    box-shadow:
+      inset 0 1px 2px oklch(0 0 0 / 35%),
+      0 0 6px oklch(0.55 0.1 175 / 18%);
+  }
+
+  .dark *::-webkit-scrollbar-corner {
+    background: var(--scrollbar-track);
+  }
+
   body {
     @apply bg-background text-foreground;
   }
   html {
     @apply font-sans;
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
