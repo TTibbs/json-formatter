@@ -115,7 +115,8 @@ export type TransformErrorType =
   | "INVALID_EXPRESSION"
   | "TYPE_MISMATCH"
   | "DSL_INVALID"
-  | "STRUCTURAL_CONFLICT";
+  | "STRUCTURAL_CONFLICT"
+  | "GRAPH_INVALID";
 
 export interface TransformError {
   type: TransformErrorType;
@@ -124,6 +125,8 @@ export interface TransformError {
   path?: string;
   /** The output field this error belongs to ("user.fullName", "emails[2]"). */
   outputField?: string;
+  /** Graph node that produced this error, when applicable. */
+  nodeId?: string;
 }
 
 /** Result of running a transform — never throws, errors are collected. */

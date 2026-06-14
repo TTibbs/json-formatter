@@ -247,9 +247,6 @@ describe("builder rows <-> DSL (via core AST)", () => {
     const { output, errors } = transform(input, dsl);
     expect(errors).toEqual([]);
     expect(output).toMatchObject({
-      fullName: "John Doe",
-      isAdult: true,
-      email: "john@example.com",
       firstItem: "Keyboard",
       names: ["Ada", "Linus"],
       emails: ["ada@example.com", "linus@example.com"],

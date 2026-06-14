@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { transform, type TransformError } from "@json-transformer/core";
+import { runGraph, transform, type TransformError } from "@json-transformer/core";
 import { CircleHelp, FileJson2, LayoutTemplate, Search } from "lucide-react";
 import { useDebounce } from "@/lib/use-debounce";
 import { dslToRows, newRow, rowsToDsl, type BuilderRow } from "@/lib/builder";
@@ -22,6 +22,12 @@ import {
   trackTransformWarning,
 } from "@/lib/analytics";
 import { SAMPLE_DSL, SAMPLE_INPUT } from "@/lib/shared";
+import {
+  createSampleGraph,
+  parseGraph,
+  serializeGraph,
+  type TransformGraph,
+} from "@/lib/graph";
 import { InputPanel } from "@/components/input-panel-and-fields/input-panel";
 import { TransformPanel } from "@/components/transform-panel/transform-panel";
 import { OutputPanel } from "@/components/output-panel/output-panel";
@@ -36,12 +42,14 @@ export default function Home() {
     () => dslToRows(SAMPLE_DSL) ?? [],
   );
   const [builderNotice, setBuilderNotice] = useState<string | null>(null);
+  const [graph, setGraph] = useState<TransformGraph>(() => createSampleGraph());
   const [helpOpen, setHelpOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   const debouncedInput = useDebounce(inputText, 200);
   const debouncedDsl = useDebounce(dslText, 200);
+  const debouncedGraph = useDebounce(serializeGraph(graph), 200);
   const transformFingerprintRef = useRef<string | null>(null);
 
   const parsedInputForHints = useMemo(() => {
@@ -67,6 +75,17 @@ export default function Home() {
     setDslText(SAMPLE_DSL);
     setBuilderRows(dslToRows(SAMPLE_DSL) ?? []);
     setBuilderNotice(null);
+  }
+
+  function loadGraphSample() {
+    setInputText(SAMPLE_INPUT);
+    setGraph(createSampleGraph());
+    setBuilderNotice(null);
+  }
+
+  function loadWorkbenchSample() {
+    if (editorMode === "graph") loadGraphSample();
+    else loadDslSample();
   }
 
   function handleInputPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
@@ -185,37 +204,51 @@ export default function Home() {
       }
     }
 
-    let parsedDsl: unknown;
-    if (debouncedDsl.trim() === "") {
-      dslError = {
-        title: "No transform",
-        detail: "Write a DSL object to transform the input.",
-      };
-    } else {
-      try {
-        parsedDsl = JSON.parse(debouncedDsl);
-      } catch (err) {
+    if (editorMode === "graph") {
+      const parsedGraph = parseGraph(debouncedGraph);
+      if (!parsedGraph) {
         dslError = {
-          title: "Invalid DSL",
-          detail:
-            err instanceof Error ? err.message : "The DSL must be valid JSON.",
+          title: "Invalid graph",
+          detail: "The graph must be valid JSON with version 2.",
         };
+      } else if (!inputError) {
+        const res = runGraph(parsedInput, parsedGraph);
+        output = JSON.stringify(res.output, null, 2);
+        warnings = res.errors;
+      }
+    } else {
+      let parsedDsl: unknown;
+      if (debouncedDsl.trim() === "") {
+        dslError = {
+          title: "No transform",
+          detail: "Write a DSL object to transform the input.",
+        };
+      } else {
+        try {
+          parsedDsl = JSON.parse(debouncedDsl);
+        } catch (err) {
+          dslError = {
+            title: "Invalid DSL",
+            detail:
+              err instanceof Error ? err.message : "The DSL must be valid JSON.",
+          };
+        }
+      }
+
+      if (!inputError && !dslError) {
+        const res = transform(parsedInput, parsedDsl as never);
+        output = JSON.stringify(res.output, null, 2);
+        warnings = res.errors;
       }
     }
 
-    if (!inputError && !dslError) {
-      const res = transform(parsedInput, parsedDsl as never);
-      output = JSON.stringify(res.output, null, 2);
-      warnings = res.errors;
-    }
-
     return { inputError, dslError, output, warnings };
-  }, [debouncedInput, debouncedDsl]);
+  }, [debouncedInput, debouncedDsl, debouncedGraph, editorMode]);
 
   useEffect(() => {
     if (result.inputError || result.dslError || result.output == null) return;
 
-    const fingerprint = `${debouncedInput}::${debouncedDsl}::${result.warnings.length}`;
+    const fingerprint = `${debouncedInput}::${editorMode}::${editorMode === "graph" ? debouncedGraph : debouncedDsl}::${result.warnings.length}`;
     if (transformFingerprintRef.current === fingerprint) return;
     transformFingerprintRef.current = fingerprint;
 
@@ -311,8 +344,8 @@ export default function Home() {
         onUseTemplate={useTemplate}
         onTryExample={tryExample}
         onSwitchMode={switchMode}
-        onLoadInputSample={loadDslSample}
-        onLoadDslSample={loadDslSample}
+        onLoadInputSample={loadWorkbenchSample}
+        onLoadDslSample={loadWorkbenchSample}
         onOpenTemplates={() => setTemplatesOpen(true)}
         onOpenHelp={() => setHelpOpen(true)}
       />
@@ -321,7 +354,7 @@ export default function Home() {
         <InputPanel
           inputText={inputText}
           onInputChange={setInputText}
-          onLoadSample={loadDslSample}
+          onLoadSample={loadWorkbenchSample}
           onInputPaste={handleInputPaste}
           parsedInput={parsedInputForHints}
           onMapField={handleMapField}
@@ -332,6 +365,7 @@ export default function Home() {
           editorMode={editorMode}
           onSwitchMode={switchMode}
           onLoadDslSample={loadDslSample}
+          onLoadGraphSample={loadGraphSample}
           builderRows={builderRows}
           pathSuggestions={pathSuggestions}
           parsedInput={parsedInputForHints}
@@ -339,6 +373,8 @@ export default function Home() {
           onRowsChange={handleRowsChange}
           dslText={dslText}
           onDslChange={setDslText}
+          graph={graph}
+          onGraphChange={setGraph}
           builderNotice={builderNotice}
           dslError={result.dslError}
         />

@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import type { TransformError } from "@json-transformer/core";
+import type { TransformError, TransformGraph } from "@json-transformer/core";
+import { GraphEditor } from "@/components/graph-editor/graph-editor";
 import { TransformBuilder } from "@/components/transform-builder";
 import { LineNumberTextarea } from "@/components/line-number-textarea";
 import { ErrorBanner } from "@/components/ui/error-banner";
@@ -14,6 +15,7 @@ interface TransformPanelProps {
   editorMode: EditorMode;
   onSwitchMode: (mode: EditorMode) => void;
   onLoadDslSample: () => void;
+  onLoadGraphSample: () => void;
   builderRows: BuilderRow[];
   pathSuggestions: PathSuggestion[];
   parsedInput: unknown;
@@ -21,6 +23,8 @@ interface TransformPanelProps {
   onRowsChange: (rows: BuilderRow[]) => void;
   dslText: string;
   onDslChange: (value: string) => void;
+  graph: TransformGraph;
+  onGraphChange: (graph: TransformGraph) => void;
   builderNotice: string | null;
   dslError: PanelError;
 }
@@ -29,6 +33,7 @@ export function TransformPanel({
   editorMode,
   onSwitchMode,
   onLoadDslSample,
+  onLoadGraphSample,
   builderRows,
   pathSuggestions,
   parsedInput,
@@ -36,14 +41,16 @@ export function TransformPanel({
   onRowsChange,
   dslText,
   onDslChange,
+  graph,
+  onGraphChange,
   builderNotice,
   dslError,
 }: TransformPanelProps) {
   const rowErrors = useMemo(() => {
     const map: Record<string, string[]> = {};
     for (const w of warnings) {
-      if (!w.outputField) continue;
-      const key = w.outputField.replace(/\[\d+\].*/, "");
+      const key = w.outputField?.replace(/\[\d+\].*/, "") ?? w.nodeId;
+      if (!key) continue;
       const list = (map[key] ??= []);
       if (!list.includes(w.message)) list.push(w.message);
     }
@@ -57,9 +64,14 @@ export function TransformPanel({
           Transform
         </h2>
         <div className="flex items-center gap-1.5">
-          {dslText.includes("$pipeline") && (
+          {editorMode === "dsl" && dslText.includes("$pipeline") && (
             <span className="rounded border border-violet-500/40 bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-violet-300">
               Pipeline
+            </span>
+          )}
+          {editorMode === "graph" && (
+            <span className="rounded border border-sky-500/40 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-300">
+              Graph
             </span>
           )}
           <div className="flex rounded-md border p-0.5">
@@ -75,10 +87,16 @@ export function TransformPanel({
             >
               DSL
             </TabButton>
+            <TabButton
+              active={editorMode === "graph"}
+              onClick={() => onSwitchMode("graph")}
+            >
+              Graph
+            </TabButton>
           </div>
           <button
             type="button"
-            onClick={onLoadDslSample}
+            onClick={editorMode === "graph" ? onLoadGraphSample : onLoadDslSample}
             className="rounded-md border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             Load sample
@@ -94,6 +112,8 @@ export function TransformPanel({
           rowErrors={rowErrors}
           onChange={onRowsChange}
         />
+      ) : editorMode === "graph" ? (
+        <GraphEditor graph={graph} onChange={onGraphChange} />
       ) : (
         <LineNumberTextarea
           value={dslText}

@@ -1,7 +1,7 @@
 import posthog from "posthog-js";
 import type { TransformErrorType } from "@json-transformer/core";
 
-type EditorMode = "builder" | "dsl";
+type EditorMode = "builder" | "dsl" | "graph";
 
 function isEnabled(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN);

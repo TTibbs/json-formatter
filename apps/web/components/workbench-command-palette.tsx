@@ -96,6 +96,12 @@ export function WorkbenchCommandPalette({
         disabled: editorMode === "dsl",
       },
       {
+        id: "action:switch-graph",
+        label: "Switch to Graph",
+        keywords: "graph nodes edges flow editor mode",
+        disabled: editorMode === "graph",
+      },
+      {
         id: "action:load-input-sample",
         label: "Load input sample",
         keywords: "sample input json load",
@@ -152,6 +158,9 @@ export function WorkbenchCommandPalette({
         break;
       case "action:switch-dsl":
         onSwitchMode("dsl");
+        break;
+      case "action:switch-graph":
+        onSwitchMode("graph");
         break;
       case "action:load-input-sample":
         onLoadInputSample();

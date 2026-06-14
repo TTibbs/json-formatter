@@ -6,6 +6,7 @@ import {
   SAMPLE_INPUT,
   SAMPLE_PIPELINE_DSL,
 } from "@/lib/shared";
+import { createSampleGraph, serializeGraph } from "@/lib/graph";
 
 export interface HelpExample {
   input: Record<string, unknown>;
@@ -104,6 +105,21 @@ export const HELP_SECTIONS: HelpSection[] = [
     example: {
       input: JSON.parse(SAMPLE_INPUT),
       dsl: JSON.parse(SAMPLE_PIPELINE_DSL),
+    },
+  },
+  {
+    title: "Graph editor",
+    description:
+      "Build transforms as a DAG of nodes connected by edges. Use the Graph tab to add map/nest/rename nodes, connect input → map → output, and run directly via runGraph.",
+    tips: [
+      "input and output nodes are required terminals",
+      "Map array nodes reference body node ids (nest, rename, remove) executed per item",
+      "Legacy DSL and $pipeline compile to graphs automatically when using transform()",
+      "POST /api/graph/run accepts { graph, input } for server-side execution",
+    ],
+    example: {
+      input: JSON.parse(SAMPLE_INPUT),
+      dsl: JSON.parse(serializeGraph(createSampleGraph())) as Record<string, unknown>,
     },
   },
 ];

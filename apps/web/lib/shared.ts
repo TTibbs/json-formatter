@@ -1,3 +1,5 @@
+import { createSampleGraph, serializeGraph } from "./graph";
+
 export const SAMPLE_INPUT = JSON.stringify(
   {
     users: [
@@ -67,3 +69,6 @@ export const SAMPLE_PIPELINE_DSL = JSON.stringify(
   null,
   2,
 );
+
+/** Graph-native sample — nest notifications under settings per user. */
+export const SAMPLE_GRAPH = serializeGraph(createSampleGraph());
