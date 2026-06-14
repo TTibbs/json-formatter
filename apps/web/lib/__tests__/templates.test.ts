@@ -12,6 +12,7 @@ describe("template catalog", () => {
   for (const template of TEMPLATES) {
     describe(template.name, () => {
       it("is flat-builder compatible and round-trips", () => {
+        if (template.dslOnly) return;
         const rows = dslToRows(JSON.stringify(template.dsl));
         expect(rows).not.toBeNull();
         expect(rowsToDsl(rows!)).toEqual(template.dsl);
@@ -84,6 +85,18 @@ describe("template catalog", () => {
       title: "tward/json-transformer",
       message: "Deployment finished",
       channel: "deployments",
+    });
+  });
+
+  it("User notifications template nests notifications under settings", () => {
+    const t = TEMPLATES.find((x) => x.id === "user-notifications-nest")!;
+    const { output, errors } = transform(t.input, t.dsl);
+    expect(errors).toEqual([]);
+    expect(output).toEqual({
+      users: [
+        { id: 1, name: "Ada", settings: { notifications: ["ping"] } },
+        { id: 2, name: "Bob", settings: { notifications: ["alert"] } },
+      ],
     });
   });
 });

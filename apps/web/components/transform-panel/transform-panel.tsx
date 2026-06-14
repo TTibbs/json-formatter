@@ -57,6 +57,11 @@ export function TransformPanel({
           Transform
         </h2>
         <div className="flex items-center gap-1.5">
+          {dslText.includes("$pipeline") && (
+            <span className="rounded border border-violet-500/40 bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-violet-300">
+              Pipeline
+            </span>
+          )}
           <div className="flex rounded-md border p-0.5">
             <TabButton
               active={editorMode === "builder"}

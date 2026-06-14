@@ -114,7 +114,8 @@ export type TransformErrorType =
   | "PATH_NOT_FOUND"
   | "INVALID_EXPRESSION"
   | "TYPE_MISMATCH"
-  | "DSL_INVALID";
+  | "DSL_INVALID"
+  | "STRUCTURAL_CONFLICT";
 
 export interface TransformError {
   type: TransformErrorType;
@@ -129,4 +130,34 @@ export interface TransformError {
 export interface TransformResult {
   output: JsonValue;
   errors: TransformError[];
+}
+
+/** Normalized pipeline step union for structural transforms. */
+export type PipelineStep =
+  | ForeachStep
+  | MoveStep
+  | RenameStep
+  | RemoveStep;
+
+export interface ForeachStep {
+  type: "foreach";
+  source: string;
+  steps: PipelineStep[];
+}
+
+export interface MoveStep {
+  type: "move";
+  from: string;
+  to: string;
+}
+
+export interface RenameStep {
+  type: "rename";
+  from: string;
+  to: string;
+}
+
+export interface RemoveStep {
+  type: "remove";
+  path: string;
 }

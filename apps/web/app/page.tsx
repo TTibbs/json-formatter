@@ -2,12 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { transform, type TransformError } from "@json-transformer/core";
-import {
-  CircleHelp,
-  FileJson2,
-  LayoutTemplate,
-  Search,
-} from "lucide-react";
+import { CircleHelp, FileJson2, LayoutTemplate, Search } from "lucide-react";
 import { useDebounce } from "@/lib/use-debounce";
 import { dslToRows, newRow, rowsToDsl, type BuilderRow } from "@/lib/builder";
 import { extractPaths } from "@/lib/json-paths";
@@ -31,6 +26,7 @@ import { InputPanel } from "@/components/input-panel-and-fields/input-panel";
 import { TransformPanel } from "@/components/transform-panel/transform-panel";
 import { OutputPanel } from "@/components/output-panel/output-panel";
 import type { EditorMode, PanelError } from "@/types/types";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   const [inputText, setInputText] = useState(SAMPLE_INPUT);
@@ -67,6 +63,7 @@ export default function Home() {
   }
 
   function loadDslSample() {
+    setInputText(SAMPLE_INPUT);
     setDslText(SAMPLE_DSL);
     setBuilderRows(dslToRows(SAMPLE_DSL) ?? []);
     setBuilderNotice(null);
@@ -260,41 +257,39 @@ export default function Home() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <header className="flex shrink-0 items-center gap-2 border-b px-4 py-3">
-        <FileJson2 className="size-5 text-muted-foreground" />
-        <h1 className="font-heading text-sm font-semibold tracking-wide">
-          JSON Transform Workbench
-        </h1>
-        <span className="ml-auto text-xs text-muted-foreground">
-          deterministic JSON transforms · no eval
-        </span>
-        <button
-          type="button"
-          onClick={() => setCommandPaletteOpen(true)}
-          className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        >
-          <Search className="size-3.5" />
-          Commands
-          <kbd className="rounded border bg-muted/50 px-1 font-mono text-[10px] leading-none text-muted-foreground">
-            ⌘K
-          </kbd>
-        </button>
-        <button
-          type="button"
-          onClick={() => setTemplatesOpen(true)}
-          className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        >
-          <LayoutTemplate className="size-3.5" />
-          Templates
-        </button>
-        <button
-          type="button"
-          onClick={() => setHelpOpen(true)}
-          className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        >
-          <CircleHelp className="size-3.5" />
-          Help
-        </button>
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3">
+        <div className="flex items-center gap-2">
+          <FileJson2 className="size-5 text-muted-foreground" />
+          <h1 className="font-heading text-sm font-semibold tracking-wide">
+            JSON Transform Workbench
+          </h1>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCommandPaletteOpen(true)}
+            className="w-64 items-center justify-between"
+          >
+            <Search className="size-3.5" />
+            Commands
+            <kbd className="rounded border bg-muted/50 px-1 font-mono text-[10px] leading-none text-muted-foreground">
+              ⌘K
+            </kbd>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setTemplatesOpen(true)}
+          >
+            <LayoutTemplate className="size-3.5" />
+            Templates
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setHelpOpen(true)}>
+            <CircleHelp className="size-3.5" />
+            Help
+          </Button>
+        </div>
       </header>
 
       <HelpDialog
@@ -316,7 +311,7 @@ export default function Home() {
         onUseTemplate={useTemplate}
         onTryExample={tryExample}
         onSwitchMode={switchMode}
-        onLoadInputSample={() => setInputText(SAMPLE_INPUT)}
+        onLoadInputSample={loadDslSample}
         onLoadDslSample={loadDslSample}
         onOpenTemplates={() => setTemplatesOpen(true)}
         onOpenHelp={() => setHelpOpen(true)}
@@ -326,7 +321,7 @@ export default function Home() {
         <InputPanel
           inputText={inputText}
           onInputChange={setInputText}
-          onLoadSample={() => setInputText(SAMPLE_INPUT)}
+          onLoadSample={loadDslSample}
           onInputPaste={handleInputPaste}
           parsedInput={parsedInputForHints}
           onMapField={handleMapField}

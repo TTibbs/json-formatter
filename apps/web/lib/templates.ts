@@ -13,8 +13,10 @@ export interface Template {
    * The transform. Must stay flat-builder compatible (no nested output
    * objects, simple conditions/concats only) and produce zero warnings
    * against `input` — enforced by templates.test.ts.
+   * Set `dslOnly: true` for $pipeline transforms that the builder cannot represent.
    */
   dsl: Record<string, JsonValue>;
+  dslOnly?: boolean;
 }
 
 export const TEMPLATES: Template[] = [
@@ -203,6 +205,35 @@ export const TEMPLATES: Template[] = [
       triggeredBy: "event.actor.username",
       durationSeconds: "event.duration_seconds",
       channel: "deployments",
+    },
+  },
+  {
+    id: "user-notifications-nest",
+    name: "Nest User Notifications",
+    category: "APIs",
+    description:
+      "Move a top-level notifications array under settings.notifications for every user — preserves other fields on each item.",
+    dslOnly: true,
+    input: {
+      users: [
+        { id: 1, name: "Ada", notifications: ["ping"] },
+        { id: 2, name: "Bob", notifications: ["alert"] },
+      ],
+    },
+    dsl: {
+      $pipeline: [
+        {
+          foreach: "users",
+          steps: [
+            {
+              move: {
+                from: "notifications",
+                to: "settings.notifications",
+              },
+            },
+          ],
+        },
+      ],
     },
   },
 ];

@@ -2,6 +2,10 @@
 
 import { useEffect } from "react";
 import { Play, X } from "lucide-react";
+import {
+  SAMPLE_INPUT,
+  SAMPLE_PIPELINE_DSL,
+} from "@/lib/shared";
 
 export interface HelpExample {
   input: Record<string, unknown>;
@@ -58,24 +62,19 @@ export const HELP_SECTIONS: HelpSection[] = [
   {
     title: "Map array",
     description:
-      "Loops over an array and picks something from each item. In the builder: choose the array as the source, then the field to pick from each item.",
+      "Loops over an array and picks something from each item. In the builder: choose Map array, set the array source (e.g. users), then the item field to pick from each element.",
     tips: [
       "Source 'users' + field 'email' produces users[].email — a list of every email",
       "The item field is relative to each item — write 'email', NOT '$users.email' or '$email'",
-      "Leave the item field empty to keep each whole item (e.g. items[] returns the full objects)",
-      "Nested fields work too: 'contact.email' picks item.contact.email",
+      "Leave the item field empty to keep each whole item (e.g. users[] returns the full objects)",
+      "Pick nested fields too: 'notifications' on users gives users[].notifications",
     ],
     example: {
-      input: {
-        items: [
-          { name: "Keyboard", price: 49 },
-          { name: "Mouse", price: 25 },
-        ],
-      },
+      input: JSON.parse(SAMPLE_INPUT),
       dsl: {
-        allNames: "items[].name",
-        allPrices: "items[].price",
-        wholeItems: "items[]",
+        names: "users[].name",
+        emails: "users[].email",
+        notifications: "users[].notifications",
       },
     },
   },
@@ -90,6 +89,21 @@ export const HELP_SECTIONS: HelpSection[] = [
     example: {
       input: { anything: "ignored" },
       dsl: { source: "api", version: 2, enabled: true },
+    },
+  },
+  {
+    title: "Array pipeline ($pipeline)",
+    description:
+      "Reshape array items before output mapping. Use $pipeline with foreach blocks to move, rename, or remove fields inside each item. Paths inside foreach are item-relative — same as Map array selects. DSL tab only; the builder cannot edit pipeline steps yet.",
+    tips: [
+      "$pipeline runs on a clone of the input before output fields are evaluated",
+      "foreach: \"users\" loops over input.users; steps use paths like \"notifications\", not \"users.notifications\"",
+      "move relocates a field; rename is the same for same-level keys; remove deletes a field",
+      "Omit output fields to return the reshaped document as-is, or add fields below $pipeline to map the result",
+    ],
+    example: {
+      input: JSON.parse(SAMPLE_INPUT),
+      dsl: JSON.parse(SAMPLE_PIPELINE_DSL),
     },
   },
 ];
@@ -196,6 +210,7 @@ export function HelpDialog({ open, onClose, onTryExample }: HelpDialogProps) {
                 "$ paths are only for Compute expressions; plain paths (user.name) don't need it",
                 "Strings in expressions use single quotes: ' ' not \" \"",
                 "A plain word like 'api' is a fixed value; add a dot or use the builder's Map field to read a path",
+                "$pipeline is DSL-only — use the DSL tab for foreach / move / rename / remove steps",
               ].map((tip) => (
                 <li
                   key={tip}

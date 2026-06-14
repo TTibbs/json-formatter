@@ -27,13 +27,13 @@ export function resolvePath(input: unknown, path: string): unknown {
   return current;
 }
 
-function parsePath(path: string): string[] {
+export function parsePath(path: string): string[] {
   return path
     .replace(/\[(\d+)\]/g, ".$1")
     .split(".")
     .filter(Boolean);
 }
 
-function isIndex(seg: string): boolean {
+export function isIndex(seg: string): boolean {
   return /^\d+$/.test(seg);
 }

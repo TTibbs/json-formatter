@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { transform } from "@json-transformer/core";
 import { dslToRows, newRow, rowsToDsl } from "../builder";
+import { SAMPLE_DSL, SAMPLE_INPUT } from "../shared";
 
 describe("builder rows <-> DSL (via core AST)", () => {
   it("serializes all four operations", () => {
@@ -233,6 +234,27 @@ describe("builder rows <-> DSL (via core AST)", () => {
     expect(transform(input, rowsToDsl(rows)).output).toEqual({
       fullName: "John Doe",
       isAdult: true,
+    });
+  });
+
+  it("default sample round-trips through the builder and transforms cleanly", () => {
+    const input = JSON.parse(SAMPLE_INPUT);
+    const dsl = JSON.parse(SAMPLE_DSL);
+    const rows = dslToRows(SAMPLE_DSL);
+    expect(rows).not.toBeNull();
+    expect(rowsToDsl(rows!)).toEqual(dsl);
+
+    const { output, errors } = transform(input, dsl);
+    expect(errors).toEqual([]);
+    expect(output).toMatchObject({
+      fullName: "John Doe",
+      isAdult: true,
+      email: "john@example.com",
+      firstItem: "Keyboard",
+      names: ["Ada", "Linus"],
+      emails: ["ada@example.com", "linus@example.com"],
+      notifications: [["ping", "mention"], ["alert"]],
+      source: "api",
     });
   });
 });
