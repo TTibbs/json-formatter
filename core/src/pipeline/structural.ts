@@ -7,6 +7,7 @@ import type {
   RemoveStep,
   RenameStep,
   TransformError,
+  TransformErrorType,
 } from "../types/index";
 
 export function applyMove(
@@ -18,7 +19,7 @@ export function applyMove(
   const result = moveAtPath(target, step.from, step.to);
   if (!result.ok) {
     errors.push({
-      type: result.reason,
+      type: result.reason as TransformErrorType,
       message:
         result.reason === "PATH_NOT_FOUND"
           ? `Path "${step.from}" not found`
@@ -37,7 +38,12 @@ export function applyRename(
   errors: TransformError[],
   stepPath: string,
 ): void {
-  applyMove(target, { type: "move", from: step.from, to: step.to }, errors, stepPath);
+  applyMove(
+    target,
+    { type: "move", from: step.from, to: step.to },
+    errors,
+    stepPath,
+  );
 }
 
 export function applyRemove(

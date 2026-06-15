@@ -4,8 +4,17 @@ import {
   moveAtPath,
   type MutateResult,
 } from "../../parser/path-mutate";
-import type { JsonValue, TransformError } from "../../types/index";
-import type { FlattenConfig, NestConfig, RemoveConfig, RenameConfig } from "../types";
+import type {
+  JsonValue,
+  TransformError,
+  TransformErrorType,
+} from "../../types/index";
+import type {
+  FlattenConfig,
+  NestConfig,
+  RemoveConfig,
+  RenameConfig,
+} from "../types";
 
 function cloneRecord(value: JsonValue): Record<string, JsonValue> {
   return structuredClone(value) as Record<string, JsonValue>;
@@ -34,7 +43,7 @@ function recordMutateError(
   errors: TransformError[],
 ): void {
   errors.push({
-    type: result.reason,
+    type: result.reason as TransformErrorType,
     message:
       result.reason === "PATH_NOT_FOUND"
         ? `Path "${path}" not found`
@@ -137,7 +146,7 @@ export function applyScopedStructural(
       const result = moveAtPath(cloned, from, to);
       if (!result.ok) {
         errors.push({
-          type: result.reason,
+          type: result.reason as TransformErrorType,
           message:
             result.reason === "PATH_NOT_FOUND"
               ? `Path "${from}" not found`
@@ -158,7 +167,7 @@ export function applyScopedStructural(
       const result = deleteAtPath(cloned, path);
       if (!result.ok) {
         errors.push({
-          type: "PATH_NOT_FOUND",
+          type: "PATH_NOT_FOUND" as TransformErrorType,
           message: `Path "${path}" not found`,
           path,
           nodeId,
@@ -173,7 +182,7 @@ export function applyScopedStructural(
   const result = moveAtPath(cloned, nest.from, nest.to);
   if (!result.ok) {
     errors.push({
-      type: result.reason,
+      type: result.reason as TransformErrorType,
       message:
         result.reason === "PATH_NOT_FOUND"
           ? `Path "${nest.from}" not found`
