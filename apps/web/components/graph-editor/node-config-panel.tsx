@@ -181,4 +181,5 @@ export const NODE_TYPE_LABELS: Record<GraphNodeType, string> = {
   map: "Map",
   project: "Project",
   condition: "Condition",
+  sort: "Sort",
 };
