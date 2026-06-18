@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { transform } from "@json-transformer/core";
-import { dslToRows, rowsToDsl } from "../builder";
+import { runGraph, transform } from "@json-transformer/core";
+import { dslToBuilder, dslToRows, rowsToDsl } from "../builder";
 import { TEMPLATES } from "../templates";
 
 describe("template catalog", () => {
@@ -12,13 +12,19 @@ describe("template catalog", () => {
   for (const template of TEMPLATES) {
     describe(template.name, () => {
       it("is flat-builder compatible and round-trips", () => {
-        if (template.dslOnly) return;
-        const rows = dslToRows(JSON.stringify(template.dsl));
-        expect(rows).not.toBeNull();
-        expect(rowsToDsl(rows!)).toEqual(template.dsl);
+        if (template.dslOnly || template.preferredMode === "graph") return;
+        const parsed = dslToBuilder(JSON.stringify(template.dsl));
+        expect(parsed).not.toBeNull();
+        expect(rowsToDsl(parsed!.rows, parsed!.sortSettings)).toEqual(template.dsl);
       });
 
       it("produces zero warnings against its own sample input", () => {
+        if (template.preferredMode === "graph") {
+          expect(template.graph).toBeDefined();
+          const result = runGraph(template.input, template.graph!);
+          expect(result.errors).toEqual([]);
+          return;
+        }
         const result = transform(template.input, template.dsl);
         expect(result.errors).toEqual([]);
       });
@@ -98,5 +104,13 @@ describe("template catalog", () => {
         { id: 2, name: "Bob", settings: { notifications: ["alert"] } },
       ],
     });
+  });
+
+  it("Graph guide templates run without errors", () => {
+    for (const id of ["guide-graph-reshape", "guide-graph-deep-sort"]) {
+      const t = TEMPLATES.find((x) => x.id === id)!;
+      const result = runGraph(t.input, t.graph!);
+      expect(result.errors).toEqual([]);
+    }
   });
 });

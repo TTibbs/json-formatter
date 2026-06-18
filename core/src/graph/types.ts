@@ -1,4 +1,6 @@
-import type { Expr, JsonValue, Node } from "../types/index";
+import type { Expr, JsonValue, Node, SortOrder } from "../types/index";
+
+export type { SortOrder };
 
 export interface TransformGraph {
   id: string;
@@ -24,7 +26,8 @@ export type GraphNodeType =
   | "flatten"
   | "map"
   | "project"
-  | "condition";
+  | "condition"
+  | "sort";
 
 export interface GraphNode {
   id: string;
@@ -41,7 +44,18 @@ export type GraphNodeConfig =
   | MapConfig
   | ProjectConfig
   | ConditionConfig
+  | SortConfig
   | Record<string, never>;
+
+export interface SortConfig {
+  order: SortOrder;
+  /** Sort keys of object at this path in the current document scope. */
+  path?: string;
+  /** Post-projection: walk output JSON and sort objects at this path. */
+  at?: string;
+  /** Recursively sort object keys and primitive array elements. */
+  deep?: boolean;
+}
 
 export interface PickConfig {
   paths: Record<string, string>;

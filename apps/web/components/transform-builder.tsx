@@ -8,7 +8,9 @@ import {
   type BuilderOperation,
   type BuilderRow,
   type ConditionComparator,
+  type OutputSortSettings,
 } from "@/lib/builder";
+import { OutputSortToolbar } from "@/components/output-sort-toolbar";
 import type { PathSuggestion } from "@/lib/json-paths";
 import {
   trackBuilderFieldAdded,
@@ -42,6 +44,8 @@ interface TransformBuilderProps {
   itemFields: (arrayPath: string) => string[];
   /** Warning messages grouped by output field key. */
   rowErrors?: Record<string, string[]>;
+  sortSettings: OutputSortSettings;
+  onSortSettingsChange: (settings: OutputSortSettings) => void;
   onChange: (rows: BuilderRow[]) => void;
 }
 
@@ -50,6 +54,8 @@ export function TransformBuilder({
   paths,
   itemFields,
   rowErrors = {},
+  sortSettings,
+  onSortSettingsChange,
   onChange,
 }: TransformBuilderProps) {
   const listId = useId();
@@ -79,6 +85,11 @@ export function TransformBuilder({
 
   return (
     <div className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden">
+      <OutputSortToolbar
+        sortSettings={sortSettings}
+        rows={rows}
+        onSortSettingsChange={onSortSettingsChange}
+      />
       <datalist id={valuePathsId}>
         {valuePaths.map((p) => (
           <option key={p.path} value={p.path} />

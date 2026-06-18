@@ -1,4 +1,5 @@
 import {
+  extractSort,
   normalize,
   parseExpression,
   serializeNode,
@@ -8,6 +9,102 @@ import {
   type Node,
   type ObjectNode,
 } from "@json-transformer/core";
+
+export type OutputKeyOrder =
+  | "none"
+  | "root-alphabetical"
+  | "deep-alphabetical"
+  | "array-alphabetical";
+
+export interface OutputSortSettings {
+  order: OutputKeyOrder;
+  /** Output field key when order === "array-alphabetical" */
+  arrayField?: string;
+}
+
+export const DEFAULT_OUTPUT_SORT_SETTINGS: OutputSortSettings = {
+  order: "none",
+};
+
+export function arraySortCandidates(rows: BuilderRow[]): string[] {
+  return rows
+    .filter(
+      (row) =>
+        row.operation === "map" &&
+        row.select.trim() === "" &&
+        row.outputKey.trim() !== "",
+    )
+    .map((row) => row.outputKey.trim());
+}
+
+export function parseSortSettings(
+  dsl: Record<string, JsonValue>,
+): OutputSortSettings & { unsupported?: boolean } {
+  const { sort } = extractSort(dsl);
+
+  if (sort === undefined) {
+    return { order: "none" };
+  }
+
+  if (sort === "alphabetical") {
+    return { order: "root-alphabetical" };
+  }
+
+  if (typeof sort === "object" && sort !== null && !Array.isArray(sort)) {
+    const obj = sort as Record<string, JsonValue>;
+
+    if (obj.deep === true) {
+      return { order: "deep-alphabetical" };
+    }
+
+    const at = obj.at;
+
+    if (typeof at === "string" && at.endsWith("[]")) {
+      const field = at.slice(0, -2);
+      if (field.length > 0) {
+        return { order: "array-alphabetical", arrayField: field };
+      }
+    }
+
+    return { order: "none", unsupported: true };
+  }
+
+  return { order: "none", unsupported: true };
+}
+
+export function applySortSettings(
+  dsl: Record<string, JsonValue>,
+  settings: OutputSortSettings,
+): Record<string, JsonValue> {
+  const { outputDsl } = extractSort(dsl);
+  const base =
+    typeof outputDsl === "object" &&
+    outputDsl !== null &&
+    !Array.isArray(outputDsl)
+      ? { ...(outputDsl as Record<string, JsonValue>) }
+      : {};
+
+  if (settings.order === "none") {
+    return base;
+  }
+
+  if (settings.order === "root-alphabetical") {
+    return { $sort: "alphabetical", ...base };
+  }
+
+  if (settings.order === "deep-alphabetical") {
+    return { $sort: { deep: true }, ...base };
+  }
+
+  if (settings.order === "array-alphabetical" && settings.arrayField) {
+    return {
+      $sort: { at: `${settings.arrayField}[]` },
+      ...base,
+    };
+  }
+
+  return base;
+}
 
 export type BuilderOperation =
   | "path"
@@ -314,8 +411,12 @@ function branchValue(node: Node): string | null {
 // --- Serialization API --------------------------------------------------
 
 /** Serialize builder rows into a DSL object via the core AST. */
-export function rowsToDsl(rows: BuilderRow[]): Record<string, JsonValue> {
-  return serializeNode(rowsToNode(rows)) as Record<string, JsonValue>;
+export function rowsToDsl(
+  rows: BuilderRow[],
+  sortSettings: OutputSortSettings = DEFAULT_OUTPUT_SORT_SETTINGS,
+): Record<string, JsonValue> {
+  const dsl = serializeNode(rowsToNode(rows)) as Record<string, JsonValue>;
+  return applySortSettings(dsl, sortSettings);
 }
 
 /**
@@ -395,12 +496,15 @@ function nodeToRow(key: string, node: Node): BuilderRow | null {
 }
 
 /**
- * Parse DSL text into builder rows via core's `normalize`.
- * Returns null when the text is invalid JSON, contains invalid expressions
- * (kept in the DSL tab rather than silently mangled), or uses shapes the
- * flat builder can't represent.
+ * Parse DSL text into builder rows and sort settings.
+ * Returns null when the text is invalid JSON, contains invalid expressions,
+ * or uses shapes the flat builder can't represent.
  */
-export function dslToRows(dslText: string): BuilderRow[] | null {
+export function dslToBuilder(dslText: string): {
+  rows: BuilderRow[];
+  sortSettings: OutputSortSettings;
+  unsupportedSort?: boolean;
+} | null {
   let dsl: unknown;
   try {
     dsl = JSON.parse(dslText);
@@ -408,8 +512,37 @@ export function dslToRows(dslText: string): BuilderRow[] | null {
     return null;
   }
 
-  const { node, errors } = normalize(dsl as never);
+  if (typeof dsl !== "object" || dsl === null || Array.isArray(dsl)) {
+    return null;
+  }
+
+  const dslObj = dsl as Record<string, JsonValue>;
+  const sortParsed = parseSortSettings(dslObj);
+  const { outputDsl } = extractSort(dslObj);
+
+  const { node, errors } = normalize(outputDsl as never);
   if (errors.length > 0) return null;
 
-  return nodeToRows(node);
+  const rows = nodeToRows(node);
+  if (rows === null) return null;
+
+  return {
+    rows,
+    sortSettings: {
+      order: sortParsed.order,
+      arrayField: sortParsed.arrayField,
+    },
+    unsupportedSort: sortParsed.unsupported,
+  };
+}
+
+/**
+ * Parse DSL text into builder rows via core's `normalize`.
+ * Returns null when the text is invalid JSON, contains invalid expressions
+ * (kept in the DSL tab rather than silently mangled), or uses shapes the
+ * flat builder can't represent.
+ */
+export function dslToRows(dslText: string): BuilderRow[] | null {
+  const parsed = dslToBuilder(dslText);
+  return parsed?.rows ?? null;
 }

@@ -19,6 +19,7 @@ export type {
   ProjectConfig,
   RemoveConfig,
   RenameConfig,
+  SortConfig,
   TransformGraph,
 } from "./types";
 

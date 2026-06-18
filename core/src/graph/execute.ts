@@ -6,6 +6,7 @@ import {
   applyNestPure,
   applyRemovePure,
   applyRenamePure,
+  applySortPure,
 } from "./handlers/pure-structural";
 import type {
   FlattenConfig,
@@ -15,6 +16,7 @@ import type {
   ProjectConfig,
   RemoveConfig,
   RenameConfig,
+  SortConfig,
   TransformGraph,
 } from "./types";
 import { validateGraph } from "./validate";
@@ -201,6 +203,14 @@ function executeNode(
       return applyFlattenPure(
         nodeInput,
         node.config as FlattenConfig,
+        node.id,
+        errors,
+      );
+
+    case "sort":
+      return applySortPure(
+        nodeInput,
+        node.config as SortConfig,
         node.id,
         errors,
       );

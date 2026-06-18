@@ -1,5 +1,6 @@
 import { normalize } from "../dsl/normalize";
-import { extractPipeline, normalizePipeline } from "../pipeline/normalize";
+import { extractPipeline, extractSort, normalizePipeline } from "../pipeline/normalize";
+import { parseSortDirective } from "../sort/index";
 import type {
   JsonValue,
   PipelineStep,
@@ -10,6 +11,7 @@ import type {
   CompileResult,
   GraphEdge,
   GraphNode,
+  SortConfig,
   TransformGraph,
 } from "./types";
 
@@ -80,6 +82,17 @@ function compileBodySteps(
         config: { paths: [step.path] },
       });
       bodyIds.push(id);
+      continue;
+    }
+
+    if (step.type === "sort") {
+      const id = nextId(`${prefix}_sort`);
+      nodes.push({
+        id,
+        type: "sort",
+        config: { order: step.order, path: step.path, deep: step.deep },
+      });
+      bodyIds.push(id);
     }
   }
 
@@ -128,9 +141,27 @@ function compileTopLevelStep(
     };
   }
 
-  const id = nextId(`${prefix}_remove`);
+  if (step.type === "remove") {
+    const id = nextId(`${prefix}_remove`);
+    return {
+      nodes: [{ id, type: "remove", config: { paths: [step.path] } }],
+      flowNodeId: id,
+    };
+  }
+
+  return compileSortTopLevelStep(
+    { order: step.order, path: step.path, deep: step.deep },
+    prefix,
+  );
+}
+
+function compileSortTopLevelStep(
+  config: SortConfig,
+  prefix: string,
+): { nodes: GraphNode[]; flowNodeId: string } {
+  const id = nextId(`${prefix}_sort`);
   return {
-    nodes: [{ id, type: "remove", config: { paths: [step.path] } }],
+    nodes: [{ id, type: "sort", config }],
     flowNodeId: id,
   };
 }
@@ -151,7 +182,8 @@ export function compileToGraph(dsl: RawDsl): CompileResult {
   ];
   const edges: GraphEdge[] = [];
 
-  const { pipeline: rawPipeline, outputDsl } = extractPipeline(dsl);
+  const { pipeline: rawPipeline, outputDsl: afterPipeline } = extractPipeline(dsl);
+  const { sort: rawSort, outputDsl } = extractSort(afterPipeline);
   let flowTail = inputId;
 
   if (rawPipeline !== undefined) {
@@ -178,6 +210,16 @@ export function compileToGraph(dsl: RawDsl): CompileResult {
     });
     edges.push({ from: flowTail, to: projectId });
     flowTail = projectId;
+  }
+
+  if (rawSort !== undefined) {
+    const sortConfig = parseSortDirective(rawSort, errors, "$sort");
+    if (sortConfig) {
+      const compiled = compileSortTopLevelStep(sortConfig, "s");
+      nodes.push(...compiled.nodes);
+      edges.push({ from: flowTail, to: compiled.flowNodeId });
+      flowTail = compiled.flowNodeId;
+    }
   }
 
   edges.push({ from: flowTail, to: outputId });

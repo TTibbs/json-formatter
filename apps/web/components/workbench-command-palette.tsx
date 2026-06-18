@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/command-palette";
 import { HELP_SECTIONS, type HelpExample } from "@/components/help-dialog";
 import { TEMPLATES, type Template } from "@/lib/templates";
+import { WORKBENCH_EXAMPLES } from "@/lib/shared";
 import type { EditorMode } from "@/types/types";
 
 export interface WorkbenchCommandPaletteProps {
@@ -19,6 +20,7 @@ export interface WorkbenchCommandPaletteProps {
   onSwitchMode: (mode: EditorMode) => void;
   onLoadInputSample: () => void;
   onLoadDslSample: () => void;
+  onLoadGraphSample: () => void;
   onOpenTemplates: () => void;
   onOpenHelp: () => void;
 }
@@ -36,6 +38,7 @@ function templateKeywords(template: Template) {
     template.name,
     template.category,
     template.description,
+    template.preferredMode ?? "",
   ];
   const arrow = template.name.split(" -> ");
   if (arrow.length === 2) {
@@ -60,6 +63,7 @@ export function WorkbenchCommandPalette({
   onSwitchMode,
   onLoadInputSample,
   onLoadDslSample,
+  onLoadGraphSample,
   onOpenTemplates,
   onOpenHelp,
 }: WorkbenchCommandPaletteProps) {
@@ -80,6 +84,13 @@ export function WorkbenchCommandPalette({
       label: template.name,
       subtitle: template.category,
       keywords: templateKeywords(template),
+    }));
+
+    const guideItems: CommandPaletteItem[] = WORKBENCH_EXAMPLES.map((example) => ({
+      id: `guide:${example.id}`,
+      label: example.title,
+      subtitle: example.description,
+      keywords: `${example.id} ${example.title} ${example.description} ${example.mode}`,
     }));
 
     const actionItems: CommandPaletteItem[] = [
@@ -108,13 +119,18 @@ export function WorkbenchCommandPalette({
       },
       {
         id: "action:load-dsl-sample",
-        label: "Load transform sample",
-        keywords: "sample dsl transform load",
+        label: "Load builder sample",
+        keywords: "sample dsl transform builder load",
+      },
+      {
+        id: "action:load-graph-sample",
+        label: "Load graph sample",
+        keywords: "sample graph transform nodes load",
       },
       {
         id: "action:open-templates",
         label: "Browse templates",
-        keywords: "templates gallery shopify stripe",
+        keywords: "templates gallery shopify stripe guides",
       },
       {
         id: "action:open-help",
@@ -132,6 +148,7 @@ export function WorkbenchCommandPalette({
 
     return [
       { heading: "Templates", items: templateItems },
+      { heading: "Workbench guides", items: guideItems },
       { heading: "Actions", items: actionItems },
       { heading: "Help examples", items: exampleItems },
     ];
@@ -142,6 +159,20 @@ export function WorkbenchCommandPalette({
       const templateId = item.id.slice("template:".length);
       const template = TEMPLATES.find((t) => t.id === templateId);
       if (template) onUseTemplate(template);
+      return;
+    }
+
+    if (item.id.startsWith("guide:")) {
+      const exampleId = item.id.slice("guide:".length);
+      const example = WORKBENCH_EXAMPLES.find((e) => e.id === exampleId);
+      if (example) {
+        onTryExample({
+          input: example.input as Record<string, unknown>,
+          dsl: example.dsl,
+          graph: example.graph,
+          mode: example.mode,
+        });
+      }
       return;
     }
 
@@ -168,6 +199,9 @@ export function WorkbenchCommandPalette({
       case "action:load-dsl-sample":
         onLoadDslSample();
         break;
+      case "action:load-graph-sample":
+        onLoadGraphSample();
+        break;
       case "action:open-templates":
         onOpenTemplates();
         break;
@@ -182,10 +216,10 @@ export function WorkbenchCommandPalette({
       open={open}
       onOpenChange={onOpenChange}
       groups={groups}
-      groupOrder={["Templates", "Actions", "Help examples"]}
+      groupOrder={["Templates", "Workbench guides", "Actions", "Help examples"]}
       title="Command palette"
-      description="Search templates, actions, and help examples"
-      placeholder="Search templates, actions, help…"
+      description="Search templates, guides, actions, and help examples"
+      placeholder="Search templates, guides, help…"
       className="max-w-lg"
       onItemSelect={handleItemSelect}
     />

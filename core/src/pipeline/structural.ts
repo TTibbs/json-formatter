@@ -1,11 +1,13 @@
-import { deleteAtPath, moveAtPath } from "../parser/path-mutate";
+import { deleteAtPath, getAtPath, moveAtPath, setAtPath } from "../parser/path-mutate";
 import { resolvePath } from "../parser/path";
+import { sortObjectKeysAlphabetically, sortDeepAlphabetically } from "../sort/index";
 import type {
   JsonValue,
   MoveStep,
   PipelineStep,
   RemoveStep,
   RenameStep,
+  SortStep,
   TransformError,
   TransformErrorType,
 } from "../types/index";
@@ -63,6 +65,74 @@ export function applyRemove(
   }
 }
 
+export function applySort(
+  target: Record<string, JsonValue>,
+  step: SortStep,
+  errors: TransformError[],
+  stepPath: string,
+): void {
+  if (step.deep) {
+    const sorted = sortDeepAlphabetically(target) as Record<string, JsonValue>;
+    for (const key of Object.keys(target)) {
+      delete target[key];
+    }
+    for (const [key, value] of Object.entries(sorted)) {
+      target[key] = value;
+    }
+    return;
+  }
+
+  if (!step.path || step.path.length === 0) {
+    const sorted = sortObjectKeysAlphabetically(target);
+    for (const key of Object.keys(target)) {
+      delete target[key];
+    }
+    for (const [key, value] of Object.entries(sorted)) {
+      target[key] = value;
+    }
+    return;
+  }
+
+  const existing = getAtPath(target, step.path);
+  if (existing === undefined) {
+    errors.push({
+      type: "PATH_NOT_FOUND",
+      message: `Path "${step.path}" not found`,
+      path: step.path,
+      outputField: stepPath,
+    });
+    return;
+  }
+
+  if (
+    existing === null ||
+    typeof existing !== "object" ||
+    Array.isArray(existing)
+  ) {
+    errors.push({
+      type: "TYPE_MISMATCH",
+      message: `Expected an object at path "${step.path}"`,
+      path: step.path,
+      outputField: stepPath,
+    });
+    return;
+  }
+
+  const setResult = setAtPath(
+    target,
+    step.path,
+    sortObjectKeysAlphabetically(existing as Record<string, JsonValue>),
+  );
+  if (!setResult.ok) {
+    errors.push({
+      type: "TYPE_MISMATCH",
+      message: `Cannot sort keys at path "${step.path}"`,
+      path: step.path,
+      outputField: stepPath,
+    });
+  }
+}
+
 export function applyStructuralStep(
   target: Record<string, JsonValue>,
   step: Exclude<PipelineStep, { type: "foreach" }>,
@@ -78,6 +148,9 @@ export function applyStructuralStep(
       break;
     case "remove":
       applyRemove(target, step, errors, stepPath);
+      break;
+    case "sort":
+      applySort(target, step, errors, stepPath);
       break;
   }
 }

@@ -1,6 +1,16 @@
 import type { JsonValue } from "@json-transformer/core";
+import {
+  createDeepSortGraph,
+  createReshapeAndProjectGraph,
+  type TransformGraph,
+} from "./graph";
+import { TEAM_DIRECTORY_INPUT } from "./shared";
 
-export type TemplateCategory = "E-commerce" | "Payments" | "APIs";
+export type TemplateCategory =
+  | "Guides"
+  | "E-commerce"
+  | "Payments"
+  | "APIs";
 
 export interface Template {
   id: string;
@@ -17,9 +27,127 @@ export interface Template {
    */
   dsl: Record<string, JsonValue>;
   dslOnly?: boolean;
+  preferredMode?: "builder" | "dsl" | "graph";
+  graph?: TransformGraph;
 }
 
 export const TEMPLATES: Template[] = [
+  {
+    id: "guide-builder-concat",
+    name: "Builder: Concat fields",
+    category: "Guides",
+    description:
+      "Join two user names with a separator using an explicit concat expression.",
+    input: TEAM_DIRECTORY_INPUT,
+    dsl: {
+      roster: "$users[0].name + ' / ' + $users[1].name",
+    },
+    preferredMode: "builder",
+  },
+  {
+    id: "guide-builder-if-else",
+    name: "Builder: If / Else tier",
+    category: "Guides",
+    description:
+      "Pick elevated or standard access based on the first user's role.",
+    input: TEAM_DIRECTORY_INPUT,
+    dsl: {
+      access: {
+        if: "$users[0].role == 'admin'",
+        then: "elevated",
+        else: "standard",
+      },
+    },
+    preferredMode: "builder",
+  },
+  {
+    id: "guide-sort-top",
+    name: "Sort output keys (A-Z)",
+    category: "Guides",
+    description: "Reorder top-level output field names alphabetically with $sort.",
+    input: TEAM_DIRECTORY_INPUT,
+    dsl: {
+      $sort: "alphabetical",
+      z_field: "users[0].name",
+      a_field: "users[1].email",
+      m_field: "users[0].role",
+    },
+    preferredMode: "builder",
+  },
+  {
+    id: "guide-sort-deep",
+    name: "Sort all levels (deep)",
+    category: "Guides",
+    description: "Deep $sort alphabetizes nested object keys in the output.",
+    input: {
+      z_top: "last",
+      meta: { z_inner: 1, a_inner: 2 },
+      users: TEAM_DIRECTORY_INPUT.users,
+      a_top: "first",
+    },
+    dsl: {
+      $sort: { deep: true },
+      names: "users[].name",
+      meta: "meta",
+    },
+    preferredMode: "builder",
+  },
+  {
+    id: "guide-pipeline-rename-remove",
+    name: "Pipeline: rename & remove",
+    category: "Guides",
+    description:
+      "Nested foreach renames sku to productSku and drops legacy on each order line.",
+    dslOnly: true,
+    preferredMode: "dsl",
+    input: {
+      orders: [
+        {
+          lines: [
+            { sku: "KB-01", legacy: true, qty: 1 },
+            { sku: "MS-02", legacy: false, qty: 2 },
+          ],
+        },
+      ],
+    },
+    dsl: {
+      $pipeline: [
+        {
+          foreach: "orders",
+          steps: [
+            {
+              foreach: "lines",
+              steps: [
+                { rename: { from: "sku", to: "productSku" } },
+                { remove: "legacy" },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    id: "guide-graph-reshape",
+    name: "Graph: reshape & project",
+    category: "Guides",
+    description:
+      "Map users, nest notifications per item, then project names and emails arrays.",
+    preferredMode: "graph",
+    input: TEAM_DIRECTORY_INPUT,
+    dsl: {},
+    graph: createReshapeAndProjectGraph(),
+  },
+  {
+    id: "guide-graph-deep-sort",
+    name: "Graph: deep sort output",
+    category: "Guides",
+    description: "Project output fields, then sort keys at all levels with a sort node.",
+    preferredMode: "graph",
+    input: TEAM_DIRECTORY_INPUT,
+    dsl: {},
+    graph: createDeepSortGraph(),
+  },
   {
     id: "shopify-hubspot",
     name: "Shopify Customer -> HubSpot Contact",
@@ -239,6 +367,7 @@ export const TEMPLATES: Template[] = [
 ];
 
 export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
+  "Guides",
   "E-commerce",
   "Payments",
   "APIs",

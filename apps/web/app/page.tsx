@@ -4,7 +4,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { runGraph, transform, type TransformError } from "@json-transformer/core";
 import { CircleHelp, FileJson2, LayoutTemplate, Search } from "lucide-react";
 import { useDebounce } from "@/lib/use-debounce";
-import { dslToRows, newRow, rowsToDsl, type BuilderRow } from "@/lib/builder";
+import {
+  DEFAULT_OUTPUT_SORT_SETTINGS,
+  dslToBuilder,
+  dslToRows,
+  newRow,
+  rowsToDsl,
+  type BuilderRow,
+  type OutputSortSettings,
+} from "@/lib/builder";
 import { extractPaths } from "@/lib/json-paths";
 import { HelpDialog, type HelpExample } from "@/components/help-dialog";
 import type { FieldMapping } from "@/lib/field-mapping";
@@ -21,9 +29,14 @@ import {
   trackTransformCompleted,
   trackTransformWarning,
 } from "@/lib/analytics";
-import { SAMPLE_DSL, SAMPLE_INPUT } from "@/lib/shared";
 import {
-  createSampleGraph,
+  getDefaultExampleForMode,
+  SAMPLE_DSL,
+  SAMPLE_INPUT,
+  type WorkbenchExample,
+} from "@/lib/shared";
+import {
+  createReshapeAndProjectGraph,
   parseGraph,
   serializeGraph,
   type TransformGraph,
@@ -39,10 +52,15 @@ export default function Home() {
   const [dslText, setDslText] = useState(SAMPLE_DSL);
   const [editorMode, setEditorMode] = useState<EditorMode>("builder");
   const [builderRows, setBuilderRows] = useState<BuilderRow[]>(
-    () => dslToRows(SAMPLE_DSL) ?? [],
+    () => dslToBuilder(SAMPLE_DSL)?.rows ?? [],
+  );
+  const [outputSortSettings, setOutputSortSettings] = useState<OutputSortSettings>(
+    () => dslToBuilder(SAMPLE_DSL)?.sortSettings ?? DEFAULT_OUTPUT_SORT_SETTINGS,
   );
   const [builderNotice, setBuilderNotice] = useState<string | null>(null);
-  const [graph, setGraph] = useState<TransformGraph>(() => createSampleGraph());
+  const [graph, setGraph] = useState<TransformGraph>(() =>
+    createReshapeAndProjectGraph(),
+  );
   const [helpOpen, setHelpOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -65,22 +83,74 @@ export default function Home() {
     [parsedInputForHints],
   );
 
-  function handleRowsChange(rows: BuilderRow[]) {
+  function applyBuilderState(
+    rows: BuilderRow[],
+    sortSettings: OutputSortSettings,
+  ) {
     setBuilderRows(rows);
-    setDslText(JSON.stringify(rowsToDsl(rows), null, 2));
+    setOutputSortSettings(sortSettings);
+    setDslText(JSON.stringify(rowsToDsl(rows, sortSettings), null, 2));
+  }
+
+  function handleRowsChange(rows: BuilderRow[]) {
+    applyBuilderState(rows, outputSortSettings);
+  }
+
+  function handleSortSettingsChange(sortSettings: OutputSortSettings) {
+    applyBuilderState(builderRows, sortSettings);
+  }
+
+  function loadBuilderFromDsl(dslJson: string) {
+    const parsed = dslToBuilder(dslJson);
+    if (!parsed) return false;
+    setBuilderRows(parsed.rows);
+    setOutputSortSettings(parsed.sortSettings);
+    if (parsed.unsupportedSort) {
+      setBuilderNotice(
+        "Custom sort in DSL — edit in the DSL tab.",
+      );
+    }
+    return true;
+  }
+
+  function applyWorkbenchExample(
+    example: WorkbenchExample | HelpExample,
+  ) {
+    const inputJson = JSON.stringify(example.input, null, 2);
+    setInputText(inputJson);
+
+    const mode = example.mode ?? "builder";
+
+    if (mode === "graph" && example.graph) {
+      setGraph(structuredClone(example.graph));
+      setBuilderNotice(null);
+      setEditorMode("graph");
+      return;
+    }
+
+    if (!example.dsl) return;
+
+    const dslJson = JSON.stringify(example.dsl, null, 2);
+    setDslText(dslJson);
+
+    if (mode === "builder") {
+      loadBuilderFromDsl(dslJson);
+      if (!dslToBuilder(dslJson)?.unsupportedSort) {
+        setBuilderNotice(null);
+      }
+      setEditorMode("builder");
+    } else {
+      setBuilderNotice(null);
+      setEditorMode("dsl");
+    }
   }
 
   function loadDslSample() {
-    setInputText(SAMPLE_INPUT);
-    setDslText(SAMPLE_DSL);
-    setBuilderRows(dslToRows(SAMPLE_DSL) ?? []);
-    setBuilderNotice(null);
+    applyWorkbenchExample(getDefaultExampleForMode("builder"));
   }
 
   function loadGraphSample() {
-    setInputText(SAMPLE_INPUT);
-    setGraph(createSampleGraph());
-    setBuilderNotice(null);
+    applyWorkbenchExample(getDefaultExampleForMode("graph"));
   }
 
   function loadWorkbenchSample() {
@@ -107,16 +177,23 @@ export default function Home() {
   function switchMode(mode: EditorMode) {
     if (mode === editorMode) return;
     if (mode === "builder") {
-      const rows = dslToRows(dslText);
-      if (rows === null) {
+      const parsed = dslToBuilder(dslText);
+      if (parsed === null) {
         setBuilderNotice(
           "This transform uses features the builder doesn't support yet (nested objects or invalid JSON). Keep editing it as DSL.",
         );
         return;
       }
-      setBuilderRows(rows);
+      setBuilderRows(parsed.rows);
+      setOutputSortSettings(parsed.sortSettings);
+      if (parsed.unsupportedSort) {
+        setBuilderNotice("Custom sort in DSL — edit in the DSL tab.");
+      } else {
+        setBuilderNotice(null);
+      }
+    } else {
+      setBuilderNotice(null);
     }
-    setBuilderNotice(null);
     trackModeSwitched({ from_mode: editorMode, to_mode: mode });
     setEditorMode(mode);
   }
@@ -125,14 +202,15 @@ export default function Home() {
     let rows = builderRows;
 
     if (editorMode === "dsl") {
-      const imported = dslToRows(dslText);
+      const imported = dslToBuilder(dslText);
       if (imported === null) {
         setBuilderNotice(
           "Can't add fields visually while the DSL uses unsupported shapes. Edit it in the DSL tab.",
         );
         return;
       }
-      rows = imported;
+      rows = imported.rows;
+      setOutputSortSettings(imported.sortSettings);
     }
 
     const usedKeys = new Set(rows.map((r) => r.outputKey));
@@ -154,30 +232,38 @@ export default function Home() {
   }
 
   function tryExample(example: HelpExample) {
-    const inputJson = JSON.stringify(example.input, null, 2);
-    const dslJson = JSON.stringify(example.dsl, null, 2);
-    setInputText(inputJson);
-    setDslText(dslJson);
-    setBuilderRows(dslToRows(dslJson) ?? []);
-    setBuilderNotice(null);
+    applyWorkbenchExample(example);
     trackHelpExampleLoaded();
     setHelpOpen(false);
   }
 
   function useTemplate(template: Template) {
-    const inputJson = JSON.stringify(template.input, null, 2);
-    const dslJson = JSON.stringify(template.dsl, null, 2);
-    setInputText(inputJson);
-    setDslText(dslJson);
-    setBuilderRows(dslToRows(dslJson) ?? []);
-    setBuilderNotice(null);
-    setEditorMode("builder");
+    const mode =
+      template.preferredMode ?? (template.dslOnly ? "dsl" : "builder");
+
+    if (mode === "graph" && template.graph) {
+      setInputText(JSON.stringify(template.input, null, 2));
+      setGraph(structuredClone(template.graph));
+      setBuilderNotice(null);
+      setEditorMode("graph");
+    } else {
+      const dslJson = JSON.stringify(template.dsl, null, 2);
+      setInputText(JSON.stringify(template.input, null, 2));
+      setDslText(dslJson);
+      if (mode === "builder" && !template.dslOnly) {
+        loadBuilderFromDsl(dslJson);
+      } else {
+        setBuilderNotice(null);
+      }
+      setEditorMode(mode === "dsl" ? "dsl" : "builder");
+    }
+
     setTemplatesOpen(false);
     trackTemplateLoaded({
       template_id: template.id,
       template_name: template.name,
       template_category: template.category,
-      editor_mode: "builder",
+      editor_mode: mode,
     });
   }
 
@@ -288,6 +374,16 @@ export default function Home() {
     }
   }, [result, debouncedInput, debouncedDsl, editorMode]);
 
+  useEffect(() => {
+    if (editorMode !== "dsl") return;
+
+    const parsed = dslToBuilder(debouncedDsl);
+    if (parsed === null) return;
+
+    setOutputSortSettings(parsed.sortSettings);
+    setBuilderRows(parsed.rows);
+  }, [debouncedDsl, editorMode]);
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <header className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3">
@@ -345,7 +441,8 @@ export default function Home() {
         onTryExample={tryExample}
         onSwitchMode={switchMode}
         onLoadInputSample={loadWorkbenchSample}
-        onLoadDslSample={loadWorkbenchSample}
+        onLoadDslSample={loadDslSample}
+        onLoadGraphSample={loadGraphSample}
         onOpenTemplates={() => setTemplatesOpen(true)}
         onOpenHelp={() => setHelpOpen(true)}
       />
@@ -371,12 +468,15 @@ export default function Home() {
           parsedInput={parsedInputForHints}
           warnings={result.warnings}
           onRowsChange={handleRowsChange}
+          sortSettings={outputSortSettings}
+          onSortSettingsChange={handleSortSettingsChange}
           dslText={dslText}
           onDslChange={setDslText}
           graph={graph}
           onGraphChange={setGraph}
           builderNotice={builderNotice}
           dslError={result.dslError}
+          hasSortInDsl={dslText.includes("$sort")}
         />
 
         <OutputPanel

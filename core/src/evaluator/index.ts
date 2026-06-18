@@ -1,6 +1,7 @@
 import { evaluateMap } from "../transforms/map";
 import { resolvePath } from "../parser/path";
 import { evaluateExpression } from "./expression";
+import { sortObjectKeysAlphabetically } from "../sort/index";
 import type {
   Context,
   JsonValue,
@@ -41,6 +42,9 @@ export function evaluateNode(
           errors,
           outPath ? `${outPath}.${key}` : key,
         );
+      }
+      if (node.sortKeys === "alphabetical") {
+        return sortObjectKeysAlphabetically(result);
       }
       return result;
     }

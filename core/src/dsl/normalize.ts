@@ -1,5 +1,5 @@
 import { parseExpression } from "../parser/expression";
-import type { JsonValue, Node, RawDsl, TransformError } from "../types/index";
+import type { JsonValue, Node, RawDsl, SortOrder, TransformError } from "../types/index";
 
 export interface NormalizeResult {
   node: Node;
@@ -51,15 +51,34 @@ function normalizeValue(
     const condition = tryNormalizeCondition(value, errors, outPath);
     if (condition) return condition;
 
+    const obj = value as Record<string, unknown>;
+    let sortKeys: SortOrder | undefined;
+
+    if ("$sort" in obj) {
+      if (obj.$sort !== "alphabetical") {
+        errors.push({
+          type: "DSL_INVALID",
+          message: 'Nested "$sort" only supports "alphabetical"',
+          outputField: outPath || undefined,
+        });
+      } else {
+        sortKeys = "alphabetical";
+      }
+    }
+
     const entries: Record<string, Node> = {};
-    for (const [key, child] of Object.entries(value)) {
+    for (const [key, child] of Object.entries(obj)) {
+      if (key === "$sort") continue;
       entries[key] = normalizeValue(
         child as JsonValue,
         errors,
         outPath ? `${outPath}.${key}` : key,
       );
     }
-    return { type: "object", entries };
+
+    return sortKeys
+      ? { type: "object", entries, sortKeys }
+      : { type: "object", entries };
   }
 
   // Unsupported value (undefined, function, etc.) — degrade to null.

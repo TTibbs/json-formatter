@@ -26,9 +26,12 @@ export type Node =
   | ConditionNode
   | LiteralNode;
 
+export type SortOrder = "alphabetical";
+
 export interface ObjectNode {
   type: "object";
   entries: Record<string, Node>;
+  sortKeys?: SortOrder;
 }
 
 export interface ArrayNode {
@@ -140,7 +143,8 @@ export type PipelineStep =
   | ForeachStep
   | MoveStep
   | RenameStep
-  | RemoveStep;
+  | RemoveStep
+  | SortStep;
 
 export interface ForeachStep {
   type: "foreach";
@@ -163,4 +167,11 @@ export interface RenameStep {
 export interface RemoveStep {
   type: "remove";
   path: string;
+}
+
+export interface SortStep {
+  type: "sort";
+  order: SortOrder;
+  path?: string;
+  deep?: boolean;
 }

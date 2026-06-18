@@ -23,6 +23,8 @@ export type {
   RawDsl,
   RemoveStep,
   RenameStep,
+  SortOrder,
+  SortStep,
   Transform,
   TransformError,
   TransformErrorType,
@@ -32,7 +34,7 @@ export type {
 export { normalize, type NormalizeResult } from "./dsl/normalize";
 export { serializeNode } from "./dsl/serialize";
 export { parseExpression } from "./parser/expression";
-export { normalizePipeline, extractPipeline } from "./pipeline/normalize";
+export { normalizePipeline, extractPipeline, extractSort } from "./pipeline/normalize";
 export { runPipeline } from "./pipeline/run";
 
 export {
@@ -61,6 +63,7 @@ export type {
   ProjectConfig,
   RemoveConfig,
   RenameConfig,
+  SortConfig,
   TransformGraph,
 } from "./graph/index";
 

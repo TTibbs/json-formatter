@@ -7,7 +7,7 @@ import { TransformBuilder } from "@/components/transform-builder";
 import { LineNumberTextarea } from "@/components/line-number-textarea";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { TabButton } from "@/components/ui/tab-button";
-import type { BuilderRow } from "@/lib/builder";
+import type { BuilderRow, OutputSortSettings } from "@/lib/builder";
 import { itemFieldsFor, type PathSuggestion } from "@/lib/json-paths";
 import type { EditorMode, PanelError } from "@/types/types";
 
@@ -21,12 +21,15 @@ interface TransformPanelProps {
   parsedInput: unknown;
   warnings: TransformError[];
   onRowsChange: (rows: BuilderRow[]) => void;
+  sortSettings: OutputSortSettings;
+  onSortSettingsChange: (settings: OutputSortSettings) => void;
   dslText: string;
   onDslChange: (value: string) => void;
   graph: TransformGraph;
   onGraphChange: (graph: TransformGraph) => void;
   builderNotice: string | null;
   dslError: PanelError;
+  hasSortInDsl?: boolean;
 }
 
 export function TransformPanel({
@@ -39,12 +42,15 @@ export function TransformPanel({
   parsedInput,
   warnings,
   onRowsChange,
+  sortSettings,
+  onSortSettingsChange,
   dslText,
   onDslChange,
   graph,
   onGraphChange,
   builderNotice,
   dslError,
+  hasSortInDsl = false,
 }: TransformPanelProps) {
   const rowErrors = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -67,6 +73,11 @@ export function TransformPanel({
           {editorMode === "dsl" && dslText.includes("$pipeline") && (
             <span className="rounded border border-violet-500/40 bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-violet-300">
               Pipeline
+            </span>
+          )}
+          {editorMode !== "builder" && hasSortInDsl && (
+            <span className="rounded border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-300">
+              Sorted
             </span>
           )}
           {editorMode === "graph" && (
@@ -110,6 +121,8 @@ export function TransformPanel({
           paths={pathSuggestions}
           itemFields={(arrayPath) => itemFieldsFor(parsedInput, arrayPath)}
           rowErrors={rowErrors}
+          sortSettings={sortSettings}
+          onSortSettingsChange={onSortSettingsChange}
           onChange={onRowsChange}
         />
       ) : editorMode === "graph" ? (

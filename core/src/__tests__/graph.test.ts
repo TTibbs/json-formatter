@@ -128,4 +128,20 @@ describe("compileToGraph", () => {
     expect((mapNode!.config as { body: string[] }).body.length).toBe(1);
     expect(graph.nodes.some((n) => n.type === "nest")).toBe(true);
   });
+
+  it("compiles top-level $sort to a post-project sort node", () => {
+    const { graph, errors } = compileToGraph({
+      $sort: "alphabetical",
+      zebra: "user.name",
+      alpha: "user.age",
+    });
+    expect(errors).toEqual([]);
+
+    const sortNode = graph.nodes.find((n) => n.type === "sort");
+    expect(sortNode).toBeDefined();
+    expect(sortNode!.config).toEqual({ order: "alphabetical" });
+
+    expect(graph.edges).toContainEqual({ from: "project", to: sortNode!.id });
+    expect(graph.edges).toContainEqual({ from: sortNode!.id, to: "output" });
+  });
 });

@@ -1,4 +1,5 @@
 import type { JsonValue, PipelineStep, TransformError } from "../types/index";
+import { parseSortDirective } from "../sort/index";
 
 export interface NormalizePipelineResult {
   steps: PipelineStep[];
@@ -72,6 +73,10 @@ function normalizeStep(
 
   if (op === "remove") {
     return normalizeRemove(obj.remove, errors, stepPath);
+  }
+
+  if (op === "sort") {
+    return normalizeSort(obj.sort, errors, stepPath);
   }
 
   errors.push({
@@ -154,6 +159,31 @@ function normalizeRemove(
   return { type: "remove", path: raw };
 }
 
+function normalizeSort(
+  raw: unknown,
+  errors: TransformError[],
+  stepPath: string,
+): PipelineStep | null {
+  const config = parseSortDirective(raw, errors, stepPath);
+  if (!config) return null;
+
+  if (config.at) {
+    errors.push({
+      type: "DSL_INVALID",
+      message: '"at" is only valid on top-level $sort, not in $pipeline',
+      outputField: stepPath,
+    });
+    return null;
+  }
+
+  return {
+    type: "sort",
+    order: config.order,
+    path: config.path,
+    deep: config.deep,
+  };
+}
+
 function readFromTo(
   raw: unknown,
   errors: TransformError[],
@@ -198,4 +228,22 @@ export function extractPipeline(dsl: JsonValue): {
 
   const { $pipeline, ...rest } = obj;
   return { pipeline: $pipeline, outputDsl: rest };
+}
+
+/** Extract top-level `$sort` from a DSL object, if present. */
+export function extractSort(dsl: JsonValue): {
+  sort: unknown | undefined;
+  outputDsl: JsonValue;
+} {
+  if (typeof dsl !== "object" || dsl === null || Array.isArray(dsl)) {
+    return { sort: undefined, outputDsl: dsl };
+  }
+
+  const obj = dsl as Record<string, JsonValue>;
+  if (!("$sort" in obj)) {
+    return { sort: undefined, outputDsl: dsl };
+  }
+
+  const { $sort, ...rest } = obj;
+  return { sort: $sort, outputDsl: rest };
 }

@@ -3,14 +3,17 @@
 import { useEffect } from "react";
 import { Play, X } from "lucide-react";
 import {
+  getExampleById,
   SAMPLE_INPUT,
-  SAMPLE_PIPELINE_DSL,
+  type WorkbenchEditorMode,
 } from "@/lib/shared";
-import { createSampleGraph, serializeGraph } from "@/lib/graph";
+import type { TransformGraph } from "@/lib/graph";
 
 export interface HelpExample {
   input: Record<string, unknown>;
-  dsl: Record<string, unknown>;
+  dsl?: Record<string, unknown>;
+  graph?: TransformGraph;
+  mode?: WorkbenchEditorMode;
 }
 
 export interface HelpSection {
@@ -20,7 +23,29 @@ export interface HelpSection {
   example: HelpExample;
 }
 
+function catalogExample(id: string): HelpExample {
+  const entry = getExampleById(id)!;
+  return {
+    input: entry.input as Record<string, unknown>,
+    dsl: entry.dsl,
+    graph: entry.graph,
+    mode: entry.mode,
+  };
+}
+
 export const HELP_SECTIONS: HelpSection[] = [
+  {
+    title: "Choosing an editor",
+    description:
+      "Builder is best for flat output fields (map, compute, concat, if/else, sort). DSL adds $pipeline foreach steps the builder cannot edit yet. Graph chains nodes (map, nest, rename, sort, project) for visual flows — same engine under the hood.",
+    tips: [
+      "Builder ↔ DSL stay in sync for flat transforms; switch tabs freely",
+      "Use DSL or Graph for foreach reshape (move, rename, remove, sort)",
+      "Graph project nodes use the same output DSL as the Builder",
+      "Try it loads the example in the right editor mode automatically",
+    ],
+    example: catalogExample("builder-all-ops"),
+  },
   {
     title: "Map field",
     description:
@@ -40,6 +65,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         email: "user.contact.email",
         firstPrice: "items[0].price",
       },
+      mode: "builder",
     },
   },
   {
@@ -58,6 +84,39 @@ export const HELP_SECTIONS: HelpSection[] = [
         isAdult: "$user.age > 18",
         canVote: "$user.active && $user.age >= 18",
       },
+      mode: "builder",
+    },
+  },
+  {
+    title: "Concat",
+    description:
+      "Join strings with + in a compute expression. In the builder, choose Concat and add parts — each part can be a path or a literal.",
+    tips: [
+      "Use single-quoted literals between paths: $a + ' / ' + $b",
+      "Every path in a concat needs a leading $",
+      "Concat is shorthand for a multi-part expression",
+    ],
+    example: catalogExample("builder-all-ops"),
+  },
+  {
+    title: "If / Else",
+    description:
+      "Pick one of two output values based on a boolean expression. In the builder, choose If / Else and set the condition, then branch, and else values.",
+    tips: [
+      "Condition is a $ expression that must evaluate to true or false",
+      "Then and else can be paths, literals, or more expressions",
+      "Use == and != for string comparisons: $role == 'admin'",
+    ],
+    example: {
+      mode: "builder",
+      input: JSON.parse(SAMPLE_INPUT),
+      dsl: {
+        access: {
+          if: "$users[0].role == 'admin'",
+          then: "elevated",
+          else: "standard",
+        },
+      },
     },
   },
   {
@@ -71,6 +130,7 @@ export const HELP_SECTIONS: HelpSection[] = [
       "Pick nested fields too: 'notifications' on users gives users[].notifications",
     ],
     example: {
+      mode: "builder",
       input: JSON.parse(SAMPLE_INPUT),
       dsl: {
         names: "users[].name",
@@ -90,7 +150,21 @@ export const HELP_SECTIONS: HelpSection[] = [
     example: {
       input: { anything: "ignored" },
       dsl: { source: "api", version: 2, enabled: true },
+      mode: "builder",
     },
+  },
+  {
+    title: "Sort output keys",
+    description:
+      "Reorder output JSON keys alphabetically. In the builder, use the Key order dropdown or Sort A-Z button above your output fields.",
+    tips: [
+      "Top-level A-Z sorts every top-level output field name",
+      "All levels A-Z sorts nested object keys and primitive array values throughout the output",
+      "Inside array items A-Z appears when you map whole objects (Map array with empty item field)",
+      "DSL: \"$sort\": \"alphabetical\", \"$sort\": { \"deep\": true }, or \"$sort\": { \"at\": \"items[]\" }",
+      "Without sort, output keys follow the order of your builder rows",
+    ],
+    example: catalogExample("builder-sort-top"),
   },
   {
     title: "Array pipeline ($pipeline)",
@@ -99,30 +173,53 @@ export const HELP_SECTIONS: HelpSection[] = [
     tips: [
       "$pipeline runs on a clone of the input before output fields are evaluated",
       "foreach: \"users\" loops over input.users; steps use paths like \"notifications\", not \"users.notifications\"",
-      "move relocates a field; rename is the same for same-level keys; remove deletes a field",
-      "Omit output fields to return the reshaped document as-is, or add fields below $pipeline to map the result",
+      "move relocates a field; rename changes a key; remove deletes fields",
+      "Add { sort: { deep: true } } to alphabetize keys inside the pipeline",
+      "See Pipeline: rename & remove for nested foreach on order lines",
     ],
-    example: {
-      input: JSON.parse(SAMPLE_INPUT),
-      dsl: JSON.parse(SAMPLE_PIPELINE_DSL),
-    },
+    example: catalogExample("dsl-pipeline-nest"),
   },
   {
-    title: "Graph editor",
+    title: "Graph: reshape & project",
     description:
-      "Chain nodes with edges: structural steps (map, nest) reshape the document, then a project node maps output fields. Same engine as DSL — DSL and $pipeline compile to this graph internally.",
+      "Chain nodes with edges: map loops an array, nest runs per item, project maps output fields. Same engine as DSL — DSL and $pipeline compile to this graph internally.",
     tips: [
       "Flow: input → map_users → project → output; nest runs inside map per array item",
-      "map_users loops over users; nest_notifications moves notifications → settings.notifications on each item",
+      "map_users loops over users; nest_notifications moves notifications → settings.notifications",
       "project_contacts outputs names and emails arrays from the reshaped users",
-      "Legacy DSL compiles to the same graph via transform(); POST /api/graph/run runs graphs server-side",
     ],
-    example: {
-      input: JSON.parse(SAMPLE_INPUT),
-      dsl: JSON.parse(serializeGraph(createSampleGraph())) as Record<string, unknown>,
-    },
+    example: catalogExample("graph-reshape-and-project"),
+  },
+  {
+    title: "Graph: structural nodes",
+    description:
+      "Rename, remove, and pick nodes reshape the document without map or project. Useful when you only need key changes or a subset of fields.",
+    tips: [
+      "rename maps old keys to new keys at the current document level",
+      "remove deletes paths; pick keeps only the listed output keys",
+      "Chain rename → remove → pick for a clean public-facing shape",
+    ],
+    example: catalogExample("graph-structural"),
+  },
+  {
+    title: "Graph: deep sort & flatten",
+    description:
+      "Sort nodes reorder keys after projection; flatten pulls nested paths to the top level. Add sort from the node palette to sort output anywhere in the flow.",
+    tips: [
+      "sort with deep: true alphabetizes nested object keys throughout",
+      "flatten mappings use dot paths: authorName → author.profile.display_name",
+      "Deep sort graph: project → sort(deep) → output",
+    ],
+    example: catalogExample("graph-deep-sort"),
   },
 ];
+
+function examplePreview(example: HelpExample): string {
+  if (example.mode === "graph" && example.graph) {
+    return JSON.stringify(example.graph, null, 2);
+  }
+  return JSON.stringify(example.dsl ?? {}, null, 2);
+}
 
 interface HelpDialogProps {
   open: boolean;
@@ -175,7 +272,7 @@ export function HelpDialog({ open, onClose, onTryExample }: HelpDialogProps) {
             <code className="rounded bg-muted px-1 font-mono">array[].field</code>{" "}
             maps over a list. Click{" "}
             <span className="text-foreground">Try it</span> on any example to
-            load it into the editors.
+            load it into the right editor.
           </p>
 
           {HELP_SECTIONS.map((section) => (
@@ -211,7 +308,7 @@ export function HelpDialog({ open, onClose, onTryExample }: HelpDialogProps) {
               </ul>
 
               <pre className="mt-2 overflow-auto rounded-md border bg-background p-2 font-mono text-[11px] leading-relaxed text-muted-foreground">
-                {JSON.stringify(section.example.dsl, null, 2)}
+                {examplePreview(section.example)}
               </pre>
             </section>
           ))}
@@ -227,6 +324,7 @@ export function HelpDialog({ open, onClose, onTryExample }: HelpDialogProps) {
                 "Strings in expressions use single quotes: ' ' not \" \"",
                 "A plain word like 'api' is a fixed value; add a dot or use the builder's Map field to read a path",
                 "$pipeline is DSL-only — use the DSL tab for foreach / move / rename / remove steps",
+                "Graph examples open in the Graph tab — they are not flat builder DSL",
               ].map((tip) => (
                 <li
                   key={tip}

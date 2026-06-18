@@ -115,6 +115,16 @@ function executeBodyNode(
         itemPath,
       );
 
+    case "sort":
+      return applyScopedStructural(
+        item,
+        "sort",
+        bodyNode.config as import("../types").SortConfig,
+        bodyId,
+        errors,
+        itemPath,
+      );
+
     case "map": {
       const nestedConfig = bodyNode.config as MapConfig;
       const arr = resolvePath(item, nestedConfig.source);
