@@ -54,7 +54,91 @@
   --color-copy-button-background: var(--copy-button-background);
   --color-action-menu-foreground: var(--action-menu-foreground);
   --color-action-menu-background: var(--action-menu-background);
-}
+  --color-pixel-reveal-8: var(--pixel-reveal-8);
+  --color-pixel-reveal-7: var(--pixel-reveal-7);
+  --color-pixel-reveal-6: var(--pixel-reveal-6);
+  --color-pixel-reveal-5: var(--pixel-reveal-5);
+  --color-pixel-reveal-4: var(--pixel-reveal-4);
+  --color-pixel-reveal-3: var(--pixel-reveal-3);
+  --color-pixel-reveal-2: var(--pixel-reveal-2);
+  --color-pixel-reveal-1: var(--pixel-reveal-1);
+  --color-pixel-reveal-fallback: var(--pixel-reveal-fallback);
+  --color-code-block-changed: var(--code-block-changed);
+  --color-code-block-deleted: var(--code-block-deleted);
+  --color-code-block-inserted: var(--code-block-inserted);
+  --color-code-block-boolean: var(--code-block-boolean);
+  --color-code-block-keyword: var(--code-block-keyword);
+  --color-code-block-tag: var(--code-block-tag);
+  --color-code-block-class: var(--code-block-class);
+  --color-code-block-function: var(--code-block-function);
+  --color-code-block-punctuation: var(--code-block-punctuation);
+  --color-code-block-number: var(--code-block-number);
+  --color-code-block-variable: var(--code-block-variable);
+  --color-code-block-string: var(--code-block-string);
+  --color-code-block-comment: var(--code-block-comment);
+  --color-code-block-foreground: var(--code-block-foreground);
+  --color-code-block-background: var(--code-block-background);
+  --color-stepper-foreground: var(--stepper-foreground);
+  --color-stepper-background: var(--stepper-background);
+  @keyframes electric-pulse-slow {
+  0% {
+    opacity: 0.5;
+    filter: blur(3px);
+    }
+  100% {
+    opacity: 1;
+    filter: blur(6px);
+    }
+  }
+  @keyframes electric-flicker-fast {
+  0% {
+    opacity: 0.4;
+    filter: blur(7px);
+    }
+  50% {
+    opacity: 0.8;
+    filter: blur(10px);
+    }
+  100% {
+    opacity: 0.4;
+    filter: blur(7px);
+    }
+  }
+  --animation-marquee-slow: marquee 40s linear infinite;
+  --animation-marquee: marquee 25s linear infinite;
+  --animation-marquee-fast: marquee 15s linear infinite;
+  --animation-marquee-slow-reverse: marquee-reverse 40s linear infinite;
+  --animation-marquee-reverse: marquee-reverse 25s linear infinite;
+  --animation-marquee-fast-reverse: marquee-reverse 15s linear infinite;
+  --animation-marquee-vertical-slow: marquee-vertical 40s linear infinite;
+  --animation-marquee-vertical: marquee-vertical 25s linear infinite;
+  --animation-marquee-vertical-fast: marquee-vertical 15s linear infinite;
+  --animation-marquee-vertical-slow-reverse: marquee-vertical-reverse 40s linear infinite;
+  --animation-marquee-vertical-reverse: marquee-vertical-reverse 25s linear infinite;
+  --animation-marquee-vertical-fast-reverse: marquee-vertical-reverse 15s linear infinite
+;
+  --color-workflow-canvas-foreground: var(--workflow-canvas-foreground);
+  --color-workflow-canvas-background: var(--workflow-canvas-background);
+  @keyframes marquee {
+  0% {
+    transform: translateX(0%);}
+  100% {
+    transform: translateX(-50%);}}
+  @keyframes marquee-reverse {
+  0% {
+    transform: translateX(-50%);}
+  100% {
+    transform: translateX(0%);}}
+  @keyframes marquee-vertical {
+  0% {
+    transform: translateY(0%);}
+  100% {
+    transform: translateY(-50%);}}
+  @keyframes marquee-vertical-reverse {
+  0% {
+    transform: translateY(-50%);}
+  100% {
+    transform: translateY(0%);}}}
 
 :root {
   --background: oklch(1 0 0);
@@ -97,6 +181,34 @@
   --copy-button-foreground: oklch(0.24 0.05 210);
   --action-menu-background: oklch(0.99 0.005 255);
   --action-menu-foreground: oklch(0.22 0.03 255);
+  --pixel-reveal-fallback: oklch(0.145 0.01 165);
+  --pixel-reveal-1: oklch(0.17 0.035 165);
+  --pixel-reveal-2: oklch(0.19 0.042 166);
+  --pixel-reveal-3: oklch(0.21 0.048 167);
+  --pixel-reveal-4: oklch(0.16 0.03 164);
+  --pixel-reveal-5: oklch(0.23 0.055 168);
+  --pixel-reveal-6: oklch(0.15 0.028 163);
+  --pixel-reveal-7: oklch(0.25 0.06 169);
+  --pixel-reveal-8: oklch(0.18 0.038 166);
+  --code-block-background: oklch(0.98 0.008 150);
+  --code-block-foreground: oklch(0.26 0.05 150);
+  --code-block-comment: rgb(152, 159, 177);
+  --code-block-string: rgb(72, 118, 214);
+  --code-block-variable: rgb(201, 103, 101);
+  --code-block-number: rgb(170, 9, 130);
+  --code-block-punctuation: rgb(153, 76, 195);
+  --code-block-function: rgb(153, 76, 195);
+  --code-block-class: rgb(17, 17, 17);
+  --code-block-tag: rgb(153, 76, 195);
+  --code-block-keyword: rgb(12, 150, 155);
+  --code-block-boolean: rgb(188, 84, 84);
+  --code-block-inserted: rgb(72, 118, 214);
+  --code-block-deleted: rgba(239, 83, 80, 0.56);
+  --code-block-changed: rgb(162, 191, 252);
+  --stepper-background: oklch(0.98 0.008 265);
+  --stepper-foreground: oklch(0.24 0.05 265);
+  --workflow-canvas-background: oklch(0.985 0.006 255);
+  --workflow-canvas-foreground: oklch(0.24 0.04 255);
 }
 
 .dark {
@@ -145,6 +257,34 @@
   --scrollbar-thumb: oklch(0.34 0.035 215);
   --scrollbar-thumb-hover: oklch(0.48 0.07 195);
   --scrollbar-thumb-active: oklch(0.58 0.11 175);
+  --pixel-reveal-fallback: oklch(0.145 0.01 165);
+  --pixel-reveal-1: oklch(0.17 0.035 165);
+  --pixel-reveal-2: oklch(0.19 0.042 166);
+  --pixel-reveal-3: oklch(0.21 0.048 167);
+  --pixel-reveal-4: oklch(0.16 0.03 164);
+  --pixel-reveal-5: oklch(0.23 0.055 168);
+  --pixel-reveal-6: oklch(0.15 0.028 163);
+  --pixel-reveal-7: oklch(0.25 0.06 169);
+  --pixel-reveal-8: oklch(0.18 0.038 166);
+  --code-block-background: oklch(0.21 0.018 150);
+  --code-block-foreground: oklch(0.95 0.015 150);
+  --code-block-comment: rgb(99, 119, 119);
+  --code-block-string: rgb(173, 219, 103);
+  --code-block-variable: rgb(214, 222, 235);
+  --code-block-number: rgb(247, 140, 108);
+  --code-block-punctuation: rgb(199, 146, 234);
+  --code-block-function: rgb(130, 170, 255);
+  --code-block-class: rgb(255, 203, 139);
+  --code-block-tag: rgb(127, 219, 202);
+  --code-block-keyword: rgb(127, 219, 202);
+  --code-block-boolean: rgb(255, 88, 116);
+  --code-block-inserted: rgb(173, 219, 103);
+  --code-block-deleted: rgba(239, 83, 80, 0.56);
+  --code-block-changed: rgb(162, 191, 252);
+  --stepper-background: oklch(0.21 0.018 265);
+  --stepper-foreground: oklch(0.95 0.018 265);
+  --workflow-canvas-background: oklch(0.18 0.02 255);
+  --workflow-canvas-foreground: oklch(0.95 0.02 255);
 }
 
 @layer base {
@@ -242,3 +382,103 @@
     display: none;
   }
 }
+
+[data-electric-active='true'] .electric-glow2 {
+    animation: electric-flicker-fast 0.15s infinite alternate ease-in-out;
+}
+
+[data-electric-active='true'] .electric-glow1 {
+    animation: electric-pulse-slow 4s infinite alternate ease-in-out;
+}
+
+[data-electric-scope] {
+    --electric-arc-color: #9e0000;
+    --electric-accent-color: #000b9e;
+    --electric-light-color: color-mix(in srgb, var(--electric-accent-color) 70%, transparent);
+    --electric-accent-halo: color-mix(in srgb, var(--electric-accent-color) 55%, white);
+    --electric-accent-halo-soft: color-mix(in srgb, var(--electric-accent-color) 35%, white);
+    --electric-radius: 24px;
+}
+
+[data-electric-active='true'][data-electric-volumetric='true'] {
+    box-shadow: inset 0 0 10px color-mix(in srgb, var(--electric-accent-color) 40%, transparent), inset 0 0 25px color-mix(in srgb, var(--electric-accent-color) 20%, transparent), 0 0 30px color-mix(in srgb, var(--electric-accent-color) 45%, transparent), 0 0 80px color-mix(in srgb, var(--electric-accent-color) 18%, transparent);
+}
+
+.electric-bloom {
+    border-radius: calc(var(--electric-radius) - 1px);
+    background: linear-gradient(-30deg, var(--electric-accent-color), transparent, #fff);
+}
+
+.animate-marquee {
+    animation: marquee 25s linear infinite;}
+
+.animate-marquee-slow {
+    animation: marquee 40s linear infinite;}
+
+.animate-marquee-fast {
+    animation: marquee 15s linear infinite;}
+
+.animate-marquee-reverse {
+    animation: marquee-reverse 25s linear infinite;}
+
+.animate-marquee-slow-reverse {
+    animation: marquee-reverse 40s linear infinite;}
+
+.animate-marquee-fast-reverse {
+    animation: marquee-reverse 15s linear infinite;}
+
+.animate-marquee-vertical {
+    animation: marquee-vertical 25s linear infinite;}
+
+.animate-marquee-vertical-slow {
+    animation: marquee-vertical 40s linear infinite;}
+
+.animate-marquee-vertical-fast {
+    animation: marquee-vertical 15s linear infinite;}
+
+.animate-marquee-vertical-reverse {
+    animation: marquee-vertical-reverse 25s linear infinite;}
+
+.animate-marquee-vertical-slow-reverse {
+    animation: marquee-vertical-reverse 40s linear infinite;}
+
+.animate-marquee-vertical-fast-reverse {
+    animation: marquee-vertical-reverse 15s linear infinite;}
+
+.infinite-marquee-root:hover .infinite-marquee-track, .infinite-marquee-root:focus-within .infinite-marquee-track {
+    animation-play-state: paused;}
+
+@layer components {
+  .workflow-canvas.react-flow {
+    width: 100%;
+    height: 100%;}
+  .workflow-canvas .react-flow__renderer {
+    width: 100%;
+    height: 100%;}
+  .workflow-canvas .react-flow__handle {
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    min-height: 14px;
+    background-color: var(--muted-foreground);
+    border: 2px solid var(--background);}
+  .workflow-canvas .react-flow__handle:hover {
+    background-color: var(--primary);
+    border-color: var(--background);}
+  .workflow-canvas .react-flow__connection-path {
+    stroke: var(--primary);
+    stroke-width: 2;}
+  .workflow-canvas .react-flow__edge-path {
+    stroke: var(--muted-foreground);
+    stroke-opacity: 0.55;}
+  .workflow-canvas .workflow-edge-animated {
+    stroke-dasharray: 6 6;
+    animation: workflow-edge-dash 1.2s linear infinite;}
+
+@keyframes workflow-edge-dash {
+  to {
+    stroke-dashoffset: -24;}}
+
+@media (prefers-reduced-motion: reduce) {
+  .workflow-canvas .workflow-edge-animated {
+    animation: none;}}}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, IBM_Plex_Sans, Raleway } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const ralewayHeading = Raleway({
   subsets: ["latin"],
@@ -24,9 +25,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JSON Transform Workbench",
+  title: "JSON Transformer — Reshape data between systems",
   description:
-    "Transform JSON with a declarative DSL — paste input, write a transform, see output live.",
+    "The fastest way to reshape data between systems. Transform, restructure and remap JSON without throwaway scripts or repeated AI prompting.",
 };
 
 export default function RootLayout({
@@ -38,7 +39,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={cn(
-        "h-full overflow-hidden",
+        "h-full scroll-smooth",
         "dark",
         "antialiased",
         geistSans.variable,
@@ -48,7 +49,9 @@ export default function RootLayout({
         ralewayHeading.variable,
       )}
     >
-      <body className="flex h-full flex-col overflow-hidden">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+      </body>
     </html>
   );
 }
