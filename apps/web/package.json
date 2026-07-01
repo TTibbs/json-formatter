@@ -11,7 +11,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@floating-ui/react-dom": "^2.1.8",
     "@json-transformer/core": "*",
     "@tabler/icons-react": "^3.44.0",
     "@xyflow/react": "^12.11.0",

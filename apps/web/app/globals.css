@@ -78,8 +78,6 @@
   --color-code-block-comment: var(--code-block-comment);
   --color-code-block-foreground: var(--code-block-foreground);
   --color-code-block-background: var(--code-block-background);
-  --color-stepper-foreground: var(--stepper-foreground);
-  --color-stepper-background: var(--stepper-background);
   @keyframes electric-pulse-slow {
   0% {
     opacity: 0.5;
@@ -205,8 +203,6 @@
   --code-block-inserted: rgb(72, 118, 214);
   --code-block-deleted: rgba(239, 83, 80, 0.56);
   --code-block-changed: rgb(162, 191, 252);
-  --stepper-background: oklch(0.98 0.008 265);
-  --stepper-foreground: oklch(0.24 0.05 265);
   --workflow-canvas-background: oklch(0.985 0.006 255);
   --workflow-canvas-foreground: oklch(0.24 0.04 255);
 }
@@ -281,8 +277,6 @@
   --code-block-inserted: rgb(173, 219, 103);
   --code-block-deleted: rgba(239, 83, 80, 0.56);
   --code-block-changed: rgb(162, 191, 252);
-  --stepper-background: oklch(0.21 0.018 265);
-  --stepper-foreground: oklch(0.95 0.018 265);
   --workflow-canvas-background: oklch(0.18 0.02 255);
   --workflow-canvas-foreground: oklch(0.95 0.02 255);
 }

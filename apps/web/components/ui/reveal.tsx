@@ -4,7 +4,6 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import {
   motion,
-  useInView,
   type Transition,
   type Variant,
   type Variants,
@@ -159,20 +158,12 @@ export function Reveal({
   animation = "fade-up",
   delay = 0,
   duration = 0.5,
-  threshold = 0.1,
-  once = true,
   easing = [...DEFAULT_EASE] as [number, number, number, number],
   className,
   display,
   disabled = false,
   onReveal,
 }: RevealProps) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, {
-    once,
-    amount: threshold,
-  });
-
   if (disabled) {
     return (
       <div className={cn(revealRootVariants({ display }), className)}>
@@ -196,17 +187,14 @@ export function Reveal({
 
   return (
     <motion.div
-      ref={ref}
-      initial="hidden"
-      animate={isInView ? "visible" : "hidden"}
+      initial="visible"
+      animate="visible"
       variants={{ hidden, visible }}
       transition={transition}
       className={cn(revealRootVariants({ display }), className)}
       style={flipStyle}
       onAnimationComplete={() => {
-        if (isInView && onReveal) {
-          onReveal();
-        }
+        onReveal?.();
       }}
     >
       {children}
@@ -237,17 +225,9 @@ export function RevealText({
   staggerDelay = 0.03,
   delay = 0,
   duration = 0.4,
-  threshold = 0.1,
-  once = true,
   className,
   display,
 }: RevealTextProps) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, {
-    once,
-    amount: threshold,
-  });
-
   const units = (
     by === "word" ? children.split(/\s+/) : children.split("")
   ).filter((u) => u.length > 0);
@@ -271,9 +251,8 @@ export function RevealText({
 
   return (
     <motion.span
-      ref={ref}
-      initial="hidden"
-      animate={isInView ? "visible" : "hidden"}
+      initial="visible"
+      animate="visible"
       variants={containerVariants}
       className={cn(revealRootVariants({ display }), className)}
       style={{ display: "inline-flex", flexWrap: "wrap" }}

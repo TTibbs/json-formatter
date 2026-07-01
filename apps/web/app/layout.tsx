@@ -25,9 +25,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JSON Transformer — Reshape data between systems",
+  title: "JSON Transformer — Free JSON transformation tool by Tibbs Tech",
   description:
-    "The fastest way to reshape data between systems. Transform, restructure and remap JSON without throwaway scripts or repeated AI prompting.",
+    "Paste a payload, describe the structure you need, and create reusable JSON transformations in seconds with this free tool from Tibbs Tech.",
 };
 
 export default function RootLayout({
