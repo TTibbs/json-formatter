@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DiffLineProps, HighlightStyle } from "./types";
 import {
+  checkDiffLimits,
   computeDiffRows,
   countDiffStats,
   PLACEHOLDER_LINE,
@@ -156,10 +157,15 @@ export function DiffViewer({
   );
   const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
 
-  const rows = useMemo(
-    () => computeDiffRows(original, updated, highlightStyle === "word"),
-    [original, updated, highlightStyle],
+  const diffLimits = useMemo(
+    () => checkDiffLimits(original, updated),
+    [original, updated],
   );
+
+  const rows = useMemo(() => {
+    if (!diffLimits.withinLimit) return [];
+    return computeDiffRows(original, updated, highlightStyle === "word");
+  }, [diffLimits.withinLimit, original, updated, highlightStyle]);
 
   const inlineLines = useMemo(() => rowsToInlineLines(rows), [rows]);
   const { removals, additions } = useMemo(() => countDiffStats(rows), [rows]);
@@ -225,6 +231,16 @@ export function DiffViewer({
 
       {/* Diff Content */}
       <div className="max-h-[600px] overflow-auto">
+        {!diffLimits.withinLimit ? (
+          <div className="flex flex-col items-center justify-center gap-2 px-6 py-12 text-center">
+            <p className="text-sm font-medium text-muted-foreground">
+              Diff unavailable for large inputs
+            </p>
+            <p className="max-w-md text-xs text-muted-foreground/70">
+              {diffLimits.message}
+            </p>
+          </div>
+        ) : (
         <AnimatePresence mode="wait">
           {splitView ? (
             <motion.div
@@ -316,6 +332,7 @@ export function DiffViewer({
             </motion.div>
           )}
         </AnimatePresence>
+        )}
       </div>
     </div>
   );

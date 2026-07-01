@@ -7,40 +7,61 @@ export interface PathSuggestion {
   kind: PathKind;
 }
 
+/** Max datalist / autocomplete paths before truncation. */
+export const MAX_PATH_SUGGESTIONS = 300;
+
+export interface PathExtractionResult {
+  paths: PathSuggestion[];
+  truncated: boolean;
+}
+
 /**
  * Flatten core's inferred field tree into datalist suggestions.
  * Children of arrays get sample absolute paths (`users[0].email`) so they
  * are usable as Map field sources.
  */
-export function extractPaths(input: unknown): PathSuggestion[] {
-  const out: PathSuggestion[] = [];
-  walk(inferFields(input), "", out);
-  return out;
+export function extractPaths(input: unknown): PathExtractionResult {
+  const paths: PathSuggestion[] = [];
+  const truncated = walk(inferFields(input), "", paths, MAX_PATH_SUGGESTIONS);
+  return { paths, truncated };
 }
 
-function walk(nodes: FieldNode[], arrayPrefix: string, out: PathSuggestion[]) {
+function walk(
+  nodes: FieldNode[],
+  arrayPrefix: string,
+  out: PathSuggestion[],
+  max: number,
+): boolean {
   for (const node of nodes) {
+    if (out.length >= max) return true;
+
     const abs = arrayPrefix ? `${arrayPrefix}${node.path}` : node.path;
     if (!abs) {
       // Root array placeholder — not addressable, but surface its children.
-      if (node.children) walk(node.children, "[0].", out);
+      if (node.children && walk(node.children, "[0].", out, max)) return true;
       continue;
     }
 
     if (node.kind === "array") {
       out.push({ path: abs, kind: "array" });
-      if (node.children) walk(node.children, `${abs}[0].`, out);
+      if (node.children && walk(node.children, `${abs}[0].`, out, max)) {
+        return true;
+      }
       continue;
     }
 
     if (node.kind === "object") {
       out.push({ path: abs, kind: "object" });
-      if (node.children) walk(node.children, arrayPrefix, out);
+      if (node.children && walk(node.children, arrayPrefix, out, max)) {
+        return true;
+      }
       continue;
     }
 
     out.push({ path: abs, kind: "value" });
   }
+
+  return out.length >= max;
 }
 
 /**

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { runGraph, transform, type TransformError } from "@json-transformer/core";
 import { CircleHelp, FileJson2, LayoutTemplate, Search } from "lucide-react";
 import Link from "next/link";
@@ -14,10 +15,8 @@ import {
   type OutputSortSettings,
 } from "@/lib/builder";
 import { extractPaths } from "@/lib/json-paths";
-import { HelpDialog, type HelpExample } from "@/components/help-dialog";
+import type { HelpExample } from "@/components/help-dialog";
 import type { FieldMapping } from "@/lib/field-mapping";
-import { TemplateGallery } from "@/components/template-gallery";
-import { WorkbenchCommandPalette } from "@/components/workbench-command-palette";
 import type { Template } from "@/lib/templates";
 import {
   trackFieldMapped,
@@ -47,6 +46,67 @@ import { OutputPanel } from "@/components/output-panel/output-panel";
 import type { EditorMode, PanelError } from "@/types/types";
 import { Button } from "@/components/ui/button";
 
+const HelpDialog = dynamic(
+  () => import("@/components/help-dialog").then((m) => m.HelpDialog),
+  { ssr: false },
+);
+
+const TemplateGallery = dynamic(
+  () => import("@/components/template-gallery").then((m) => m.TemplateGallery),
+  { ssr: false },
+);
+
+const WorkbenchCommandPalette = dynamic(
+  () =>
+    import("@/components/workbench-command-palette").then(
+      (m) => m.WorkbenchCommandPalette,
+    ),
+  { ssr: false },
+);
+
+/** Skip live transform above this input size (bytes). */
+const MAX_LIVE_TRANSFORM_INPUT_BYTES = 512 * 1024;
+/** Pretty-print output only below this serialized length. */
+const MAX_PRETTY_OUTPUT_CHARS = 32_000;
+
+function formatJsonOutput(value: unknown): string {
+  const compact = JSON.stringify(value);
+  if (compact.length <= MAX_PRETTY_OUTPUT_CHARS) {
+    return JSON.stringify(value, null, 2);
+  }
+  return compact;
+}
+
+function sortSettingsEqual(
+  a: OutputSortSettings,
+  b: OutputSortSettings,
+): boolean {
+  return a.order === b.order && a.arrayField === b.arrayField;
+}
+
+function builderRowsEqual(a: BuilderRow[], b: BuilderRow[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((row, i) => {
+    const other = b[i]!;
+    return (
+      row.id === other.id &&
+      row.outputKey === other.outputKey &&
+      row.operation === other.operation &&
+      row.source === other.source &&
+      row.select === other.select &&
+      row.value === other.value &&
+      row.separator === other.separator &&
+      row.parts.length === other.parts.length &&
+      row.parts.every((part, j) => part === other.parts[j]) &&
+      row.condField === other.condField &&
+      row.condOp === other.condOp &&
+      row.condValue === other.condValue &&
+      row.thenValue === other.thenValue &&
+      row.elseValue === other.elseValue
+    );
+  });
+}
+
 export default function WorkbenchPage() {
   const [inputText, setInputText] = useState(SAMPLE_INPUT);
   const [dslText, setDslText] = useState(SAMPLE_DSL);
@@ -67,21 +127,51 @@ export default function WorkbenchPage() {
 
   const debouncedInput = useDebounce(inputText, 200);
   const debouncedDsl = useDebounce(dslText, 200);
-  const debouncedGraph = useDebounce(serializeGraph(graph), 200);
+  const serializedGraph = useMemo(
+    () => (editorMode === "graph" ? serializeGraph(graph) : ""),
+    [editorMode, graph],
+  );
+  const debouncedGraph = useDebounce(serializedGraph, 200);
   const transformFingerprintRef = useRef<string | null>(null);
 
-  const parsedInputForHints = useMemo(() => {
+  const parsedInputResult = useMemo(() => {
+    if (debouncedInput.trim() === "") {
+      return {
+        status: "empty" as const,
+      };
+    }
+    if (debouncedInput.length > MAX_LIVE_TRANSFORM_INPUT_BYTES) {
+      return {
+        status: "too_large" as const,
+      };
+    }
     try {
-      return JSON.parse(debouncedInput) as unknown;
-    } catch {
-      return undefined;
+      return {
+        status: "ok" as const,
+        value: JSON.parse(debouncedInput) as unknown,
+      };
+    } catch (err) {
+      return {
+        status: "invalid" as const,
+        error: {
+          title: "Invalid JSON input",
+          detail:
+            err instanceof Error ? err.message : "Could not parse JSON.",
+        },
+      };
     }
   }, [debouncedInput]);
 
-  const pathSuggestions = useMemo(
-    () => extractPaths(parsedInputForHints),
-    [parsedInputForHints],
-  );
+  const parsedInputForHints =
+    parsedInputResult.status === "ok" ? parsedInputResult.value : undefined;
+
+  const pathExtraction = useMemo(() => {
+    if (editorMode !== "builder" || parsedInputResult.status !== "ok") {
+      return { paths: [], truncated: false };
+    }
+    return extractPaths(parsedInputResult.value);
+  }, [editorMode, parsedInputResult]);
+  const pathSuggestions = pathExtraction.paths;
 
   function applyBuilderState(
     rows: BuilderRow[],
@@ -268,27 +358,27 @@ export default function WorkbenchPage() {
   }
 
   const result = useMemo(() => {
-    let parsedInput: unknown;
     let inputError: PanelError = null;
     let dslError: PanelError = null;
     let output: string | null = null;
     let warnings: TransformError[] = [];
 
-    if (debouncedInput.trim() === "") {
+    if (parsedInputResult.status === "empty") {
       inputError = {
         title: "No input",
         detail: "Paste some JSON to get started.",
       };
-    } else {
-      try {
-        parsedInput = JSON.parse(debouncedInput);
-      } catch (err) {
-        inputError = {
-          title: "Invalid JSON input",
-          detail: err instanceof Error ? err.message : "Could not parse JSON.",
-        };
-      }
+    } else if (parsedInputResult.status === "too_large") {
+      inputError = {
+        title: "Input too large for live preview",
+        detail: `Paste is over ${Math.round(MAX_LIVE_TRANSFORM_INPUT_BYTES / 1024)} KB. Trim the payload or work in smaller chunks.`,
+      };
+    } else if (parsedInputResult.status === "invalid") {
+      inputError = parsedInputResult.error;
     }
+
+    const parsedInput =
+      parsedInputResult.status === "ok" ? parsedInputResult.value : undefined;
 
     if (editorMode === "graph") {
       const parsedGraph = parseGraph(debouncedGraph);
@@ -297,9 +387,9 @@ export default function WorkbenchPage() {
           title: "Invalid graph",
           detail: "The graph must be valid JSON with version 2.",
         };
-      } else if (!inputError) {
+      } else if (!inputError && parsedInput !== undefined) {
         const res = runGraph(parsedInput, parsedGraph);
-        output = JSON.stringify(res.output, null, 2);
+        output = formatJsonOutput(res.output);
         warnings = res.errors;
       }
     } else {
@@ -321,15 +411,15 @@ export default function WorkbenchPage() {
         }
       }
 
-      if (!inputError && !dslError) {
+      if (!inputError && !dslError && parsedInput !== undefined) {
         const res = transform(parsedInput, parsedDsl as never);
-        output = JSON.stringify(res.output, null, 2);
+        output = formatJsonOutput(res.output);
         warnings = res.errors;
       }
     }
 
     return { inputError, dslError, output, warnings };
-  }, [debouncedInput, debouncedDsl, debouncedGraph, editorMode]);
+  }, [parsedInputResult, debouncedDsl, debouncedGraph, editorMode]);
 
   useEffect(() => {
     if (result.inputError || result.dslError || result.output == null) return;
@@ -380,9 +470,37 @@ export default function WorkbenchPage() {
     const parsed = dslToBuilder(debouncedDsl);
     if (parsed === null) return;
 
-    setOutputSortSettings(parsed.sortSettings);
-    setBuilderRows(parsed.rows);
+    setOutputSortSettings((current) =>
+      sortSettingsEqual(current, parsed.sortSettings)
+        ? current
+        : parsed.sortSettings,
+    );
+    setBuilderRows((current) =>
+      builderRowsEqual(current, parsed.rows) ? current : parsed.rows,
+    );
   }, [debouncedDsl, editorMode]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (!(e.metaKey || e.ctrlKey) || e.key !== "k") return;
+      const target = e.target;
+      if (target instanceof HTMLElement) {
+        const tag = target.tagName;
+        if (
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          tag === "SELECT" ||
+          target.isContentEditable
+        ) {
+          return;
+        }
+      }
+      e.preventDefault();
+      setCommandPaletteOpen(true);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -424,31 +542,37 @@ export default function WorkbenchPage() {
         </div>
       </header>
 
-      <HelpDialog
-        open={helpOpen}
-        onClose={() => setHelpOpen(false)}
-        onTryExample={tryExample}
-      />
+      {helpOpen ? (
+        <HelpDialog
+          open={helpOpen}
+          onClose={() => setHelpOpen(false)}
+          onTryExample={tryExample}
+        />
+      ) : null}
 
-      <TemplateGallery
-        open={templatesOpen}
-        onClose={() => setTemplatesOpen(false)}
-        onUse={useTemplate}
-      />
+      {templatesOpen ? (
+        <TemplateGallery
+          open={templatesOpen}
+          onClose={() => setTemplatesOpen(false)}
+          onUse={useTemplate}
+        />
+      ) : null}
 
-      <WorkbenchCommandPalette
-        open={commandPaletteOpen}
-        onOpenChange={setCommandPaletteOpen}
-        editorMode={editorMode}
-        onUseTemplate={useTemplate}
-        onTryExample={tryExample}
-        onSwitchMode={switchMode}
-        onLoadInputSample={loadWorkbenchSample}
-        onLoadDslSample={loadDslSample}
-        onLoadGraphSample={loadGraphSample}
-        onOpenTemplates={() => setTemplatesOpen(true)}
-        onOpenHelp={() => setHelpOpen(true)}
-      />
+      {commandPaletteOpen ? (
+        <WorkbenchCommandPalette
+          open={commandPaletteOpen}
+          onOpenChange={setCommandPaletteOpen}
+          editorMode={editorMode}
+          onUseTemplate={useTemplate}
+          onTryExample={tryExample}
+          onSwitchMode={switchMode}
+          onLoadInputSample={loadWorkbenchSample}
+          onLoadDslSample={loadDslSample}
+          onLoadGraphSample={loadGraphSample}
+          onOpenTemplates={() => setTemplatesOpen(true)}
+          onOpenHelp={() => setHelpOpen(true)}
+        />
+      ) : null}
 
       <main className="grid min-h-0 flex-1 overflow-hidden grid-cols-1 md:grid-cols-3 md:grid-rows-[minmax(0,1fr)]">
         <InputPanel
@@ -468,6 +592,7 @@ export default function WorkbenchPage() {
           onLoadGraphSample={loadGraphSample}
           builderRows={builderRows}
           pathSuggestions={pathSuggestions}
+          pathSuggestionsTruncated={pathExtraction.truncated}
           parsedInput={parsedInputForHints}
           warnings={result.warnings}
           onRowsChange={handleRowsChange}

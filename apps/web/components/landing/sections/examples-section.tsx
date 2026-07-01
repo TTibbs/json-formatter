@@ -82,6 +82,7 @@ export function ExamplesSection() {
           tabs={tabLabels}
           defaultActive={tabLabels[0]}
           panels={panels}
+          glow={false}
           className="w-full"
           panelClassName="mt-6 rounded-xl border border-border/60 bg-card/40 p-4 md:p-6"
         />

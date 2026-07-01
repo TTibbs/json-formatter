@@ -24,14 +24,17 @@ export function DetectedFields({
   parsedInput,
   onMapField,
 }: DetectedFieldsProps) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
-  const detectedFields = useMemo(() => inferFields(parsedInput), [parsedInput]);
+  const detectedFields = useMemo(() => {
+    if (!open || parsedInput === undefined) return [];
+    return inferFields(parsedInput);
+  }, [open, parsedInput]);
 
-  const detectedFieldTreeData = useMemo(
-    () => fieldNodesToFileTree(detectedFields),
-    [detectedFields],
-  );
+  const detectedFieldTreeData = useMemo(() => {
+    if (!open) return [];
+    return fieldNodesToFileTree(detectedFields);
+  }, [open, detectedFields]);
 
   if (detectedFields.length === 0) return null;
 
@@ -80,7 +83,7 @@ export function DetectedFields({
               data={detectedFieldTreeData}
               variant="ghost"
               size="sm"
-              defaultExpanded={true}
+              defaultExpanded={false}
               aria-label="Detected fields"
               className="px-2 py-1.5"
               getIcon={(node) =>

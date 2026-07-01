@@ -11,7 +11,7 @@ import {
   type OutputSortSettings,
 } from "@/lib/builder";
 import { OutputSortToolbar } from "@/components/output-sort-toolbar";
-import type { PathSuggestion } from "@/lib/json-paths";
+import { MAX_PATH_SUGGESTIONS, type PathSuggestion } from "@/lib/json-paths";
 import {
   trackBuilderFieldAdded,
   trackBuilderFieldRemoved,
@@ -40,6 +40,7 @@ const COMPARATORS: { value: ConditionComparator; label: string }[] = [
 interface TransformBuilderProps {
   rows: BuilderRow[];
   paths: PathSuggestion[];
+  pathSuggestionsTruncated?: boolean;
   /** Item-relative field suggestions per array source path. */
   itemFields: (arrayPath: string) => string[];
   /** Warning messages grouped by output field key. */
@@ -52,6 +53,7 @@ interface TransformBuilderProps {
 export function TransformBuilder({
   rows,
   paths,
+  pathSuggestionsTruncated = false,
   itemFields,
   rowErrors = {},
   sortSettings,
@@ -100,6 +102,13 @@ export function TransformBuilder({
           <option key={p.path} value={p.path} />
         ))}
       </datalist>
+
+      {pathSuggestionsTruncated && (
+        <p className="shrink-0 border-b px-3 py-1.5 text-[10px] text-muted-foreground/70">
+          Path autocomplete capped at {MAX_PATH_SUGGESTIONS.toLocaleString()}{" "}
+          entries for large payloads.
+        </p>
+      )}
 
       <div className="h-0 min-h-0 flex-1 overflow-y-auto p-3">
         <div className="space-y-2">

@@ -18,6 +18,7 @@ interface TransformPanelProps {
   onLoadGraphSample: () => void;
   builderRows: BuilderRow[];
   pathSuggestions: PathSuggestion[];
+  pathSuggestionsTruncated?: boolean;
   parsedInput: unknown;
   warnings: TransformError[];
   onRowsChange: (rows: BuilderRow[]) => void;
@@ -39,6 +40,7 @@ export function TransformPanel({
   onLoadGraphSample,
   builderRows,
   pathSuggestions,
+  pathSuggestionsTruncated = false,
   parsedInput,
   warnings,
   onRowsChange,
@@ -119,6 +121,7 @@ export function TransformPanel({
         <TransformBuilder
           rows={builderRows}
           paths={pathSuggestions}
+          pathSuggestionsTruncated={pathSuggestionsTruncated}
           itemFields={(arrayPath) => itemFieldsFor(parsedInput, arrayPath)}
           rowErrors={rowErrors}
           sortSettings={sortSettings}

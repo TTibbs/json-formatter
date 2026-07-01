@@ -1,6 +1,13 @@
 node_modules
 .next
+.turbo
+.vercel
+dist
+build
+coverage
 .env*
+*.log
 .DS_Store
 .cursor/
 PRD.md
+.cursorignore

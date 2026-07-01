@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import {
   CommandPalette,
   type CommandPaletteGroup,
@@ -47,13 +47,6 @@ function templateKeywords(template: Template) {
   return parts.join(" ");
 }
 
-function isEditableTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) return false;
-  const tag = target.tagName;
-  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
-  return target.isContentEditable;
-}
-
 export function WorkbenchCommandPalette({
   open,
   onOpenChange,
@@ -67,18 +60,9 @@ export function WorkbenchCommandPalette({
   onOpenTemplates,
   onOpenHelp,
 }: WorkbenchCommandPaletteProps) {
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (!(e.metaKey || e.ctrlKey) || e.key !== "k") return;
-      if (isEditableTarget(e.target)) return;
-      e.preventDefault();
-      onOpenChange(true);
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onOpenChange]);
-
   const groups = useMemo((): CommandPaletteGroup[] => {
+    if (!open) return [];
+
     const templateItems: CommandPaletteItem[] = TEMPLATES.map((template) => ({
       id: `template:${template.id}`,
       label: template.name,
@@ -152,7 +136,7 @@ export function WorkbenchCommandPalette({
       { heading: "Actions", items: actionItems },
       { heading: "Help examples", items: exampleItems },
     ];
-  }, [editorMode]);
+  }, [editorMode, open]);
 
   function handleItemSelect(item: CommandPaletteItem) {
     if (item.id.startsWith("template:")) {
@@ -215,7 +199,7 @@ export function WorkbenchCommandPalette({
     <CommandPalette
       open={open}
       onOpenChange={onOpenChange}
-      groups={groups}
+      groups={open ? groups : []}
       groupOrder={["Templates", "Workbench guides", "Actions", "Help examples"]}
       title="Command palette"
       description="Search templates, guides, actions, and help examples"

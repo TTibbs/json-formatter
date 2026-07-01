@@ -10,11 +10,11 @@ import { ANCHORS, ROTATING_PHRASES } from "../landing-data";
 export function HeroSection() {
   return (
     <MatrixBackground
-      className="relative min-h-[90vh] w-full"
+      className="relative min-h-[500px] w-full overflow-hidden rounded-xl border border-border"
       opacity="subtle"
       density="medium"
     >
-      <section className="relative mx-auto flex max-w-6xl flex-col items-center px-4 pb-24 pt-32 text-center md:pt-40">
+      <section className="relative mx-auto flex max-w-6xl flex-col items-center justify-center px-4 pb-24 pt-32 text-center md:pt-40">
         <Reveal animation="fade-up" delay={0}>
           <p className="mb-4 text-sm font-medium uppercase tracking-widest text-emerald-400/90">
             The fastest way to reshape data between systems
@@ -36,14 +36,14 @@ export function HeroSection() {
         </Reveal>
 
         <Reveal animation="fade-up" delay={0.2}>
-          <p className="mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
+          <p className="mt-6 max-w-2xl text-center text-lg text-muted-foreground md:text-xl mx-auto">
             Transform, restructure and remap JSON without writing throwaway
             scripts or repeatedly asking AI to reshape data.
           </p>
         </Reveal>
 
         <Reveal animation="fade-up" delay={0.3}>
-          <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row">
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link href="/app">
               <ShimmerButton
                 title="Start Transforming"

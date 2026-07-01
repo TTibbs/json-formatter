@@ -1,5 +1,59 @@
 import { DiffLine, DiffRow, DiffSegment } from "./types";
 
+/** Skip O(n²) line LCS above these limits. */
+export const MAX_DIFF_LINES = 500;
+export const MAX_DIFF_BYTES = 512 * 1024;
+
+export type DiffLimitCheck =
+  | { withinLimit: true; lineCount: number; byteSize: number }
+  | {
+      withinLimit: false;
+      lineCount: number;
+      byteSize: number;
+      message: string;
+    };
+
+export function countLines(text: string): number {
+  if (text.length === 0) return 1;
+  let count = 1;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "\n") count++;
+  }
+  return count;
+}
+
+export function checkDiffLimits(
+  original: string,
+  updated: string,
+): DiffLimitCheck {
+  const origLines = countLines(original);
+  const updLines = countLines(updated);
+  const lineCount = Math.max(origLines, updLines);
+  const byteSize = original.length + updated.length;
+
+  if (lineCount > MAX_DIFF_LINES) {
+    return {
+      withinLimit: false,
+      lineCount,
+      byteSize,
+      message: `Diff is too large to compute (${lineCount.toLocaleString()} lines; limit is ${MAX_DIFF_LINES.toLocaleString()}).`,
+    };
+  }
+
+  if (byteSize > MAX_DIFF_BYTES) {
+    const limitKb = Math.round(MAX_DIFF_BYTES / 1024);
+    const sizeKb = Math.round(byteSize / 1024);
+    return {
+      withinLimit: false,
+      lineCount,
+      byteSize,
+      message: `Diff is too large to compute (${sizeKb.toLocaleString()} KB combined; limit is ${limitKb.toLocaleString()} KB).`,
+    };
+  }
+
+  return { withinLimit: true, lineCount, byteSize };
+}
+
 const CODE_TOKEN_PATTERN = /(\s+|[^\s\w]+|\w+)/g;
 
 export const isWhitespaceOnly = (text: string): boolean => {
@@ -301,6 +355,9 @@ export const computeDiffRows = (
   updated: string,
   wordLevel: boolean,
 ): DiffRow[] => {
+  const limits = checkDiffLimits(original, updated);
+  if (!limits.withinLimit) return [];
+
   const origLines = original.split("\n");
   const updLines = updated.split("\n");
   const matches = getLCSMatchPairs(origLines, updLines);

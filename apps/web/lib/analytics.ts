@@ -4,7 +4,13 @@ import type { TransformErrorType } from "@json-transformer/core";
 type EditorMode = "builder" | "dsl" | "graph";
 
 function isEnabled(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN);
+  const token = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+  if (!token) return false;
+  if (process.env.NODE_ENV !== "development") return true;
+  return (
+    process.env.NEXT_PUBLIC_POSTHOG_ENABLE_DEV === "true" ||
+    process.env.NEXT_PUBLIC_POSTHOG_DEBUG === "true"
+  );
 }
 
 function capture(event: string, properties?: Record<string, unknown>): void {

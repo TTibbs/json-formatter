@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect, useRef, useState } from "react";
 import { CodeBlock } from "@/components/ui/code-block";
 import { Reveal } from "@/components/ui/reveal";
 import { JsonCompareSlider } from "../json-compare-slider";
@@ -28,6 +29,85 @@ const DiffViewer = dynamic(
   },
 );
 
+function useLazyInView(rootMargin = "200px 0px") {
+  const ref = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || inView) return;
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setInView(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [inView, rootMargin]);
+
+  return { ref, inView };
+}
+
+function ProductDemoMockupContent() {
+  const { ref: rootRef, inView: demoInView } = useLazyInView("200px 0px");
+  const { ref: diffRef, inView: diffInView } = useLazyInView("120px 0px");
+
+  return (
+    <div ref={rootRef} className="flex flex-col gap-4 p-4">
+      {demoInView ? (
+        <JsonCompareSlider
+          before={
+            <CodeBlock
+              code={DEMO_INPUT_JSON}
+              showCopyButton={false}
+              language="json"
+              showLineNumbers
+              className="h-full rounded-none border-0"
+            />
+          }
+          after={
+            <CodeBlock
+              code={DEMO_OUTPUT_JSON}
+              showCopyButton={false}
+              language="json"
+              showLineNumbers
+              className="h-full rounded-none border-0"
+            />
+          }
+        />
+      ) : (
+        <div
+          className="h-[280px] animate-pulse rounded-xl border border-border/60 bg-muted/30 md:h-[320px]"
+          aria-hidden
+        />
+      )}
+
+      {demoInView ? (
+        <div ref={diffRef}>
+          {diffInView ? (
+            <DiffViewer
+              original={DEMO_INPUT_JSON}
+              updated={DEMO_OUTPUT_JSON}
+              variant="elevated"
+              className="text-xs"
+            />
+          ) : (
+            <div
+              className="h-48 animate-pulse rounded-xl border border-border/60 bg-muted/30"
+              aria-hidden
+            />
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function ProductDemoSection() {
   return (
     <section className="mx-auto max-w-6xl px-4 py-24 md:py-32">
@@ -52,34 +132,7 @@ export function ProductDemoSection() {
           className="w-full"
           viewportClassName="bg-background"
         >
-          <div className="flex flex-col gap-4 p-4">
-            <JsonCompareSlider
-              before={
-                <CodeBlock
-                  code={DEMO_INPUT_JSON}
-                  showCopyButton={false}
-                  language="json"
-                  showLineNumbers
-                  className="h-full rounded-none border-0"
-                />
-              }
-              after={
-                <CodeBlock
-                  code={DEMO_OUTPUT_JSON}
-                  showCopyButton={false}
-                  language="json"
-                  showLineNumbers
-                  className="h-full rounded-none border-0"
-                />
-              }
-            />
-            <DiffViewer
-              original={DEMO_INPUT_JSON}
-              updated={DEMO_OUTPUT_JSON}
-              variant="elevated"
-              className="text-xs"
-            />
-          </div>
+          <ProductDemoMockupContent />
         </BrowserMockup>
       </Reveal>
     </section>
